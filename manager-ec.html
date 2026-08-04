@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morochos Ecuador — Manager</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
+  :root{
+    --black:#0A0A0A;--gray-1:#F7F7F7;--gray-2:#EFEFEF;--gray-3:#D8D8D8;
+    --gray-4:#9B9B9B;--gray-5:#555;--red:#D0021B;--red-soft:#FFF0F2;
+    --amber:#F5A623;--amber-soft:#FFFBF0;--green:#1A7A3F;--green-soft:#F0FAF4;
+    --blue:#0066FF;--blue-soft:#F0F5FF;--purple:#6B21A8;--purple-soft:#F3E8FF;
+    --border:#E8E8E8;--shadow:0 1px 4px rgba(0,0,0,0.08);
+    --sidebar:240px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:#F9F9F9;color:var(--black);min-height:100vh;}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--black);}
+  .login-box{background:white;border-radius:20px;padding:36px 32px;width:100%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.3);}
+  .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+  .login-logo img{width:44px;height:44px;border-radius:50%;object-fit:cover;}
+  .login-logo span{font-size:18px;font-weight:800;color:var(--black);}
+  .login-title{font-size:22px;font-weight:800;margin-bottom:6px;}
+  .login-sub{font-size:13px;color:var(--gray-4);margin-bottom:24px;}
+  .login-field{margin-bottom:14px;}
+  .login-field label{display:block;font-size:12px;font-weight:600;color:var(--gray-5);margin-bottom:5px;}
+  .login-field input{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:8px;
+    font-size:14px;font-family:inherit;outline:none;}
+  .login-field input:focus{border-color:var(--black);}
+  .login-btn{width:100%;padding:13px;background:var(--black);color:white;border:none;border-radius:10px;
+    font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:8px;}
+  .login-err{color:var(--red);font-size:13px;margin-top:10px;text-align:center;display:none;}
+
+  .app{display:none;}
+  .app.visible{display:flex;}
+
+  .sidebar{
+    width:var(--sidebar);min-height:100vh;background:white;
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;
+    transition:transform .25s ease;
+  }
+  .sidebar.collapsed{transform:translateX(calc(-1 * var(--sidebar) + 52px));}
+  .sidebar-top{padding:18px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .sidebar-logo{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+  .sidebar-brand{font-size:14px;font-weight:700;color:var(--black);white-space:nowrap;overflow:hidden;}
+  .sidebar-brand small{display:block;font-size:10px;font-weight:400;color:var(--gray-4);margin-top:1px;}
+  .toggle-btn{margin-left:auto;background:none;border:none;cursor:pointer;color:var(--gray-4);
+    font-size:18px;flex-shrink:0;padding:2px;}
+
+  .sidebar-user{padding:12px 16px;border-bottom:1px solid var(--border);}
+  .sidebar-user-name{font-size:12px;font-weight:600;color:var(--black);}
+  .sidebar-user-role{font-size:11px;color:var(--gray-4);}
+
+  .sidebar-nav{flex:1;padding:10px 0;overflow-y:auto;}
+  .nav-section-title{font-size:9px;font-weight:700;color:var(--gray-4);
+    text-transform:uppercase;letter-spacing:1px;padding:10px 16px 4px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:9px 16px;margin:1px 8px;
+    color:var(--gray-5);cursor:pointer;transition:all .15s;
+    border:none;background:none;font-family:inherit;font-size:13px;font-weight:500;
+    width:calc(100% - 16px);text-align:left;white-space:nowrap;overflow:hidden;border-radius:8px;
+  }
+  .nav-item:hover{background:var(--gray-1);color:var(--black);}
+  .nav-item.active{background:var(--black);color:white;}
+  .nav-item .ni{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+  .nav-item .nl{transition:opacity .2s;}
+  .sidebar.collapsed .nl{opacity:0;pointer-events:none;}
+  .sidebar.collapsed .nav-section-title{opacity:0;}
+
+  .sidebar-logout{padding:12px 16px;border-top:1px solid var(--border);}
+  .logout-btn{display:flex;align-items:center;gap:10px;color:var(--gray-4);
+    background:none;border:none;cursor:pointer;font-family:inherit;font-size:12px;padding:6px 0;}
+  .logout-btn:hover{color:var(--black);}
+
+  .main{margin-left:var(--sidebar);flex:1;min-height:100vh;transition:margin .25s ease;}
+  .main.expanded{margin-left:52px;}
+
+  .topbar{height:54px;background:white;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+    position:sticky;top:0;z-index:50;}
+  .topbar-title{font-size:16px;font-weight:800;color:var(--black);}
+  .topbar-meta{font-size:12px;color:var(--gray-4);}
+
+  .content{padding:24px;max-width:1100px;}
+
+  .page{display:none;}
+  .page.active{display:block;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .kpi{background:white;border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:var(--shadow);}
+  .kpi-icon{font-size:22px;margin-bottom:8px;}
+  .kpi-label{font-size:11px;font-weight:600;color:var(--gray-4);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .kpi-value{font-size:26px;font-weight:800;color:var(--black);line-height:1;}
+  .kpi-sub{font-size:11px;color:var(--gray-4);margin-top:3px;}
+
+  .card{background:white;border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:var(--shadow);margin-bottom:16px;}
+  .card-title{font-size:14px;font-weight:700;color:var(--black);margin-bottom:14px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+  .table-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:var(--gray-1);font-size:11px;font-weight:700;color:var(--gray-4);
+    text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;text-align:left;
+    border-bottom:1px solid var(--border);}
+  tbody td{font-size:13px;padding:11px 14px;border-bottom:1px solid var(--gray-2);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:var(--gray-1);}
+
+  .badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+  .badge-red{background:var(--red-soft);color:var(--red);}
+  .badge-amber{background:var(--amber-soft);color:#9A6000;}
+  .badge-green{background:var(--green-soft);color:var(--green);}
+  .badge-blue{background:var(--blue-soft);color:var(--blue);}
+  .badge-gray{background:var(--gray-1);color:var(--gray-5);}
+
+  .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+  .filter-bar select,.filter-bar input[type=date]{
+    padding:6px 10px;border:1px solid var(--border);border-radius:8px;
+    font-size:12px;font-family:inherit;color:var(--black);background:white;outline:none;}
+
+  .form-group{margin-bottom:14px;}
+  .form-label{display:block;font-size:12px;font-weight:600;color:var(--gray-5);margin-bottom:5px;}
+  .form-control{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+    font-size:14px;font-family:inherit;color:var(--black);background:white;outline:none;-webkit-appearance:none;}
+  .form-control:focus{border-color:var(--black);}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .btn{padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:none;}
+  .btn-black{background:var(--black);color:white;}
+  .btn-outline{background:white;border:1px solid var(--border);color:var(--gray-5);}
+  .btn-sm{padding:6px 12px;font-size:12px;border-radius:6px;}
+
+  .rank-bar{margin-bottom:10px;}
+  .rank-label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:3px;}
+  .rank-label span{color:var(--gray-4);font-weight:400;}
+  .rank-track{background:var(--gray-2);border-radius:4px;height:7px;}
+  .rank-fill{height:100%;border-radius:4px;}
+
+  .hist-item{padding:12px 0;border-bottom:1px solid var(--gray-2);display:flex;justify-content:space-between;align-items:flex-start;}
+  .hist-item:last-child{border-bottom:none;}
+  .hist-name{font-size:13px;font-weight:700;}
+  .hist-meta{font-size:11px;color:var(--gray-4);margin-top:2px;}
+  .hist-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+  .hist-right{text-align:right;flex-shrink:0;margin-left:12px;}
+  .hist-qty{font-size:15px;font-weight:800;}
+  .hist-unit{font-size:11px;color:var(--gray-4);}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:white;border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto;}
+  .modal-title{font-size:17px;font-weight:800;margin-bottom:16px;}
+  .modal-footer{display:flex;gap:10px;margin-top:20px;}
+  .modal-footer .btn{flex:1;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--black);color:white;
+    padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;
+    z-index:999;transition:opacity .3s;opacity:0;pointer-events:none;}
+  .toast.show{opacity:1;}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--gray-4);}
+  .empty .icon{font-size:32px;margin-bottom:8px;}
+  .empty p{font-size:13px;}
+
+  @media(max-width:768px){
+    .sidebar{width:100%;transform:translateX(-100%);}
+    .sidebar.mobile-open{transform:translateX(0);}
+    .sidebar.collapsed{transform:translateX(-100%);}
+    .main{margin-left:0!important;}
+    .kpi-grid{grid-template-columns:1fr 1fr;}
+    .two-col{grid-template-columns:1fr;}
+    .content{padding:14px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="logo_morochos.png" alt="Morochos">
+      <span>Morochos EC</span>
+    </div>
+    <div class="login-title">Manager</div>
+    <div class="login-sub">Acceso exclusivo para administradores</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="l-user" placeholder="tu usuario" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="l-err">Usuario o contraseña incorrectos</div>
+  </div>
+</div>
+
+<div class="app" id="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <img src="logo_morochos.png" class="sidebar-logo" alt="Morochos">
+      <div class="sidebar-brand">
+        Morochos EC<small>Manager</small>
+      </div>
+      <button class="toggle-btn" onclick="toggleSidebar()" title="Colapsar">☰</button>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="sb-username"></div>
+      <div class="sidebar-user-role">Administrador</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title nl">Operaciones</div>
+      <button class="nav-item active" id="nav-dashboard" onclick="goTo('dashboard')">
+        <span class="ni">📊</span><span class="nl">Dashboard</span>
+      </button>
+      <button class="nav-item" id="nav-bajas" onclick="goTo('bajas')">
+        <span class="ni">📉</span><span class="nl">Bajas</span>
+      </button>
+      <button class="nav-item" id="nav-produccion" onclick="goTo('produccion')">
+        <span class="ni">🍳</span><span class="nl">Producción</span>
+      </button>
+      <div class="nav-section-title nl">Gestión</div>
+      <button class="nav-item" id="nav-empleados" onclick="goTo('empleados')">
+        <span class="ni">🪪</span><span class="nl">Empleados</span>
+      </button>
+      <button class="nav-item" id="nav-tips" onclick="goTo('tips')">
+        <span class="ni">💵</span><span class="nl">Tips</span>
+      </button>
+      <button class="nav-item" id="nav-clock" onclick="goTo('clock')">
+        <span class="ni">⏰</span><span class="nl">Clock In/Out</span>
+      </button>
+    </nav>
+    <div class="sidebar-logout">
+      <button class="logout-btn" onclick="doLogout()">
+        <span>🚪</span><span class="nl">Cerrar sesión</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main" id="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-meta" id="topbar-meta"></div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ═══ DASHBOARD ═══ -->
+      <div class="page active" id="page-dashboard">
+        <div class="kpi-grid" id="dash-kpis"></div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">📉 Bajas de hoy por local</div>
+            <div id="dash-bajas-hoy"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🍳 Producción de hoy</div>
+            <div id="dash-prod-hoy"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ BAJAS ═══ -->
+      <div class="page" id="page-bajas">
+        <div class="filter-bar">
+          <select id="fb-local" onchange="renderBajas()">
+            <option value="todos">Todos los locales</option>
+            <option>El Salado</option><option>La Victoria</option><option>Facility</option>
+          </select>
+          <select id="fb-periodo" onchange="renderBajas()">
+            <option value="todo">Todo</option><option value="hoy">Hoy</option>
+            <option value="semana">Esta semana</option><option value="mes">Este mes</option>
+            <option value="rango">Rango</option>
+          </select>
+          <div id="fb-rango" style="display:none;gap:6px;">
+            <input type="date" id="fb-desde" onchange="renderBajas()">
+            <span style="color:var(--gray-4);">—</span>
+            <input type="date" id="fb-hasta" onchange="renderBajas()">
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="exportarCSV('bajas')">⬇ CSV</button>
+        </div>
+        <div class="kpi-grid" id="b-kpis"></div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Más frecuentes</div>
+            <div id="b-ranking"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Por motivo</div>
+            <div id="b-motivos"></div>
+          </div>
+        </div>
+        <div class="card" id="b-alertas-card" style="display:none">
+          <div class="card-title" style="color:var(--red);">⚠️ Requiere atención — Receta mal preparada</div>
+          <div id="b-alertas"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin:0;">Historial</div>
+            <span id="b-count" style="font-size:12px;color:var(--gray-4);"></span>
+          </div>
+          <div id="b-list"></div>
+        </div>
+      </div>
+
+      <!-- ═══ PRODUCCIÓN ═══ -->
+      <div class="page" id="page-produccion">
+        <div class="filter-bar">
+          <select id="fp-local" onchange="renderProduccion()">
+            <option value="todos">Todos los locales</option>
+            <option>El Salado</option><option>La Victoria</option><option>Facility</option>
+          </select>
+          <select id="fp-periodo" onchange="renderProduccion()">
+            <option value="todo">Todo</option><option value="hoy">Hoy</option>
+            <option value="semana">Esta semana</option><option value="mes">Este mes</option>
+            <option value="rango">Rango</option>
+          </select>
+          <div id="fp-rango" style="display:none;gap:6px;">
+            <input type="date" id="fp-desde" onchange="renderProduccion()">
+            <span style="color:var(--gray-4);">—</span>
+            <input type="date" id="fp-hasta" onchange="renderProduccion()">
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="exportarCSV('prod')">⬇ CSV</button>
+        </div>
+        <div class="kpi-grid" id="p-kpis"></div>
+        <div class="card">
+          <div class="card-title">Más producido</div>
+          <div id="p-ranking"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin:0;">Historial</div>
+            <span id="p-count" style="font-size:12px;color:var(--gray-4);"></span>
+          </div>
+          <div id="p-list"></div>
+        </div>
+      </div>
+
+      <!-- ═══ EMPLEADOS ═══ -->
+      <div class="page" id="page-empleados">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <p style="font-size:13px;color:var(--gray-4);">Gestiona empleados y sus códigos de acceso para Turno.</p>
+          <button class="btn btn-black btn-sm" onclick="abrirModalEmp()">+ Agregar empleado</button>
+        </div>
+        <div class="filter-bar" id="f-emp-local">
+          <button class="fchip active" data-v="todos" onclick="setFEmp(this)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-family:inherit;cursor:pointer;background:white;color:var(--gray-5);font-weight:500;">Todos</button>
+          <button class="fchip" data-v="El Salado" onclick="setFEmp(this)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-family:inherit;cursor:pointer;background:white;color:var(--gray-5);font-weight:500;">El Salado</button>
+          <button class="fchip" data-v="La Victoria" onclick="setFEmp(this)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-family:inherit;cursor:pointer;background:white;color:var(--gray-5);font-weight:500;">La Victoria</button>
+          <button class="fchip" data-v="Facility" onclick="setFEmp(this)" style="padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-family:inherit;cursor:pointer;background:white;color:var(--gray-5);font-weight:500;">Facility</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Código</th><th>Nombre</th><th>Local</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="emp-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ TIPS ═══ -->
+      <div class="page" id="page-tips">
+        <div class="filter-bar">
+          <select id="ft-local" onchange="renderTips()">
+            <option value="todos">Todos los locales</option>
+            <option>El Salado</option><option>La Victoria</option><option>Facility</option>
+          </select>
+          <select id="ft-periodo" onchange="renderTips()">
+            <option value="todo">Todo</option><option value="hoy">Hoy</option>
+            <option value="semana">Esta semana</option><option value="mes">Este mes</option>
+            <option value="rango">Rango</option>
+          </select>
+          <div id="ft-rango" style="display:none;gap:6px;">
+            <input type="date" id="ft-desde" onchange="renderTips()">
+            <span style="color:var(--gray-4);">—</span>
+            <input type="date" id="ft-hasta" onchange="renderTips()">
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="exportarCSV('tips')">⬇ CSV</button>
+        </div>
+        <div class="kpi-grid" id="tips-kpis"></div>
+        <div class="card">
+          <div class="card-title">Tips por local</div>
+          <div id="tips-ranking"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin:0;">Historial</div>
+            <span id="tips-count" style="font-size:12px;color:var(--gray-4);"></span>
+          </div>
+          <div id="tips-list"></div>
+        </div>
+      </div>
+
+      <!-- ═══ CLOCK IN/OUT ═══ -->
+      <div class="page" id="page-clock">
+        <div class="filter-bar">
+          <select id="fc-local" onchange="renderClock()">
+            <option value="todos">Todos los locales</option>
+            <option>El Salado</option><option>La Victoria</option><option>Facility</option>
+          </select>
+          <select id="fc-periodo" onchange="renderClock()">
+            <option value="todo">Todo</option><option value="hoy">Hoy</option>
+            <option value="semana">Esta semana</option><option value="mes">Este mes</option>
+            <option value="rango">Rango</option>
+          </select>
+          <div id="fc-rango" style="display:none;gap:6px;">
+            <input type="date" id="fc-desde" onchange="renderClock()">
+            <span style="color:var(--gray-4);">—</span>
+            <input type="date" id="fc-hasta" onchange="renderClock()">
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="exportarCSV('clock')">⬇ CSV</button>
+        </div>
+        <div class="kpi-grid" id="clock-kpis"></div>
+        <div class="card">
+          <div class="card-title">👥 Quién está trabajando ahora</div>
+          <div id="clock-activos"></div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="card-title" style="margin:0;">Historial registros</div>
+            <span id="clock-count" style="font-size:12px;color:var(--gray-4);"></span>
+          </div>
+          <div id="clock-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- MODAL EMPLEADO -->
+<div class="modal-overlay" id="modal-emp">
+  <div class="modal-box">
+    <div class="modal-title">Agregar empleado</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre completo</label>
+        <input type="text" id="emp-nombre" class="form-control" placeholder="Nombre del empleado"/></div>
+      <div class="form-group"><label class="form-label">Código</label>
+        <input type="number" id="emp-codigo" class="form-control" placeholder="Ej: 1001"/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Local</label>
+      <select id="emp-local" class="form-control">
+        <option>El Salado</option><option>La Victoria</option><option>Facility</option>
+      </select></div>
+    <div class="form-group"><label class="form-label">Estado</label>
+      <select id="emp-estado" class="form-control">
+        <option value="activo">Activo</option><option value="inactivo">Inactivo</option>
+      </select></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-emp')">Cancelar</button>
+      <button class="btn btn-black" onclick="guardarEmp()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function doLogin(){window.doLogin&&window.doLogin();}
+function doLogout(){window.doLogout&&window.doLogout();}
+function toggleSidebar(){window.toggleSidebar&&window.toggleSidebar();}
+function goTo(id){window.goTo&&window.goTo(id);}
+function renderBajas(){window.renderBajas&&window.renderBajas();}
+function renderProduccion(){window.renderProduccion&&window.renderProduccion();}
+function cerrarModal(id){window.cerrarModal&&window.cerrarModal(id);}
+function exportarCSV(t){window.exportarCSV&&window.exportarCSV(t);}
+function abrirModalEmp(){window.abrirModalEmp&&window.abrirModalEmp();}
+function guardarEmp(){window.guardarEmp&&window.guardarEmp();}
+function eliminarEmp(id){window.eliminarEmp&&window.eliminarEmp(id);}
+function setFEmp(el){window.setFEmp&&window.setFEmp(el);}
+function renderTips(){window.renderTips&&window.renderTips();}
+function renderClock(){window.renderClock&&window.renderClock();}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy,
+         serverTimestamp, deleteDoc, doc }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD0IehL6skl91CLhxaCx15J3xOyX_VlkwQ",
+  authDomain: "morochos-ecuador.firebaseapp.com",
+  projectId: "morochos-ecuador",
+  storageBucket: "morochos-ecuador.firebasestorage.app",
+  messagingSenderId: "200807513837",
+  appId: "1:200807513837:web:3d51063e75be94753e56e4"
+};
+
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+
+// ── USUARIOS ──
+const USERS = {
+  'belenmorocho': { pass:'morochos2026', nombre:'Belen', rol:'Admin' },
+};
+
+let currentUser = null;
+let bajas=[], producciones=[], tips=[], clockRecords=[], empleados=[];
+let sidebarCollapsed = false;
+let filtroEmpLocal = 'todos';
+
+function doLogin(){
+  const u=document.getElementById('l-user').value.trim().toLowerCase().replace(/\s+/g,'');
+  const p=document.getElementById('l-pass').value;
+  const user=USERS[u];
+  if(user && user.pass===p){
+    currentUser={username:u,...user};
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('app').classList.add('visible');
+    document.getElementById('sb-username').textContent=user.nombre;
+    iniciarApp();
+  } else {
+    document.getElementById('l-err').style.display='block';
+  }
+}
+
+function doLogout(){
+  currentUser=null;
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('app').classList.remove('visible');
+}
+
+function iniciarApp(){
+  const ahora=new Date();
+  document.getElementById('topbar-meta').textContent=
+    ahora.toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  escucharFirestore();
+}
+
+function toggleSidebar(){
+  sidebarCollapsed=!sidebarCollapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed',sidebarCollapsed);
+  document.getElementById('main').classList.toggle('expanded',sidebarCollapsed);
+}
+
+function goTo(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  const titles={dashboard:'Dashboard',bajas:'Bajas',produccion:'Producción',
+    empleados:'Empleados',tips:'Tips',clock:'Clock In/Out'};
+  document.getElementById('topbar-title').textContent=titles[id]||id;
+  if(id==='dashboard') renderDashboard();
+  if(id==='bajas') renderBajas();
+  if(id==='produccion') renderProduccion();
+  if(id==='empleados') renderEmpleados();
+  if(id==='tips') renderTips();
+  if(id==='clock') renderClock();
+}
+
+function escucharFirestore(){
+  onSnapshot(query(collection(db,'bajas'),orderBy('fecha','desc')),s=>{
+    bajas=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+    if(document.getElementById('page-bajas').classList.contains('active')) renderBajas();
+  });
+  onSnapshot(query(collection(db,'producciones'),orderBy('fecha','desc')),s=>{
+    producciones=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+    if(document.getElementById('page-produccion').classList.contains('active')) renderProduccion();
+  });
+  onSnapshot(query(collection(db,'mg_empleados'),orderBy('nombre')),s=>{
+    empleados=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(document.getElementById('page-empleados').classList.contains('active')) renderEmpleados();
+  });
+  onSnapshot(query(collection(db,'tips'),orderBy('fecha','desc')),s=>{
+    tips=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(document.getElementById('page-tips').classList.contains('active')) renderTips();
+    if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+  });
+  onSnapshot(query(collection(db,'clock_records'),orderBy('fecha','desc')),s=>{
+    clockRecords=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(document.getElementById('page-clock').classList.contains('active')) renderClock();
+    if(document.getElementById('page-dashboard').classList.contains('active')) renderDashboard();
+  });
+}
+
+function getD(r){return r.fecha?.toDate?r.fecha.toDate():new Date(r.fecha||0);}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+
+function filtrarFecha(data,pid,did,hid){
+  const p=document.getElementById(pid)?.value||'todo';
+  const ahora=new Date();
+  if(p==='hoy')return data.filter(r=>getD(r).toDateString()===ahora.toDateString());
+  if(p==='semana'){const l=new Date(ahora);l.setDate(ahora.getDate()-ahora.getDay()+1);l.setHours(0,0,0,0);return data.filter(r=>getD(r)>=l);}
+  if(p==='mes')return data.filter(r=>{const d=getD(r);return d.getMonth()===ahora.getMonth()&&d.getFullYear()===ahora.getFullYear();});
+  if(p==='rango'){
+    const desde=document.getElementById(did)?.value?new Date(document.getElementById(did).value+'T00:00:00'):null;
+    const hasta=document.getElementById(hid)?.value?new Date(document.getElementById(hid).value+'T23:59:59'):null;
+    return data.filter(r=>{const d=getD(r);return(!desde||d>=desde)&&(!hasta||d<=hasta);});
+  }
+  return data;
+}
+
+function ranking(data,key,color,n=6){
+  const map={};data.forEach(r=>{map[r[key]]=(map[r[key]]||0)+(r.cant||1);});
+  const sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,n);
+  const mx=sorted[0]?.[1]||1;
+  return sorted.length?sorted.map(([k,v])=>`<div class="rank-bar">
+    <div class="rank-label">${k}<span>${v}</span></div>
+    <div class="rank-track"><div class="rank-fill" style="width:${(v/mx*100).toFixed(0)}%;background:${color};"></div></div>
+  </div>`).join(''):'<div class="empty"><p>Sin datos.</p></div>';
+}
+
+function histItem(r,qtyColor,tipo){
+  const f=getD(r).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const badge=tipo==='baja'
+    ?`<span class="badge badge-gray">${r.motivo||''}</span>`
+    :`<span class="badge badge-amber">${r.turno||''}</span>`;
+  return `<div class="hist-item">
+    <div><div class="hist-name">${r.prod||''}</div>
+    <div class="hist-meta">${f} · ${r.enc||''}</div>
+    <div class="hist-tags">
+      <span class="badge badge-gray">${r.local||''}</span>
+      ${badge}
+    </div></div>
+    <div class="hist-right"><div class="hist-qty" style="color:${qtyColor};">${r.cant||0}</div>
+    <div class="hist-unit">${r.unid||''}</div></div>
+  </div>`;
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  const hoy=new Date().toDateString();
+  const bajasHoy=bajas.filter(b=>getD(b).toDateString()===hoy);
+  const prodHoy=producciones.filter(p=>getD(p).toDateString()===hoy);
+  const tipsHoy = tips.filter(t=>getD(t).toDateString()===hoy);
+  const totalTipsHoy = tipsHoy.reduce((s,t)=>s+(t.total||0),0);
+
+  const activos = {};
+  clockRecords.filter(r=>getD(r).toDateString()===hoy).forEach(r=>{
+    if(!activos[r.nombre] || getD(r) > getD(activos[r.nombre])) activos[r.nombre] = r;
+  });
+  const trabajando = Object.values(activos).filter(r=>r.tipo==='entrada').length;
+
+  document.getElementById('dash-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-icon">📉</div><div class="kpi-label">Bajas hoy</div><div class="kpi-value">${bajasHoy.length}</div><div class="kpi-sub">registros</div></div>
+    <div class="kpi"><div class="kpi-icon">🍳</div><div class="kpi-label">Producción hoy</div><div class="kpi-value">${prodHoy.reduce((s,p)=>s+(p.cant||0),0)}</div><div class="kpi-sub">unidades</div></div>
+    <div class="kpi"><div class="kpi-icon">💵</div><div class="kpi-label">Tips hoy</div><div class="kpi-value" style="font-size:20px;">$${totalTipsHoy.toFixed(2)}</div><div class="kpi-sub">${tipsHoy.length} registros</div></div>
+    <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">Trabajando ahora</div><div class="kpi-value">${trabajando}</div><div class="kpi-sub">empleados activos</div></div>`;
+
+  const porLocal={};bajasHoy.forEach(b=>{porLocal[b.local]=(porLocal[b.local]||0)+1;});
+  document.getElementById('dash-bajas-hoy').innerHTML=Object.keys(porLocal).length
+    ?Object.entries(porLocal).map(([l,n])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-2);font-size:13px;"><span>${l}</span><b>${n} bajas</b></div>`).join('')
+    :'<div class="empty"><p>Sin bajas hoy.</p></div>';
+
+  document.getElementById('dash-prod-hoy').innerHTML=prodHoy.length
+    ?prodHoy.slice(0,5).map(p=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-2);font-size:13px;"><span>${p.prod}</span><b style="color:var(--green);">${p.cant} ${p.unid}</b></div>`).join('')
+    :'<div class="empty"><p>Sin producción registrada hoy.</p></div>';
+}
+
+// ── BAJAS ──
+function renderBajas(){
+  const p=document.getElementById('fb-periodo').value;
+  document.getElementById('fb-rango').style.display=p==='rango'?'flex':'none';
+  let data=[...bajas];
+  const loc=document.getElementById('fb-local').value;
+  if(loc!=='todos')data=data.filter(b=>b.local===loc);
+  data=filtrarFecha(data,'fb-periodo','fb-desde','fb-hasta');
+
+  const hoy=new Date().toDateString();
+  const hoyN=data.filter(b=>getD(b).toDateString()===hoy).length;
+  const byM={};data.forEach(b=>{byM[b.motivo]=(byM[b.motivo]||0)+1;});
+  const topM=Object.entries(byM).sort((a,b)=>b[1]-a[1])[0];
+
+  document.getElementById('b-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Total bajas</div><div class="kpi-value">${data.length}</div><div class="kpi-sub">en el período</div></div>
+    <div class="kpi"><div class="kpi-label">Hoy</div><div class="kpi-value">${hoyN}</div><div class="kpi-sub">registros</div></div>
+    <div class="kpi"><div class="kpi-label">Causa frecuente</div><div class="kpi-value" style="font-size:14px;line-height:1.3;">${topM?topM[0]:'—'}</div><div class="kpi-sub">${topM?topM[1]+' veces':''}</div></div>
+    <div class="kpi"><div class="kpi-label">Productos únicos</div><div class="kpi-value">${new Set(data.map(b=>b.prod)).size}</div><div class="kpi-sub">con bajas</div></div>`;
+
+  document.getElementById('b-ranking').innerHTML=ranking(data,'prod','var(--red)');
+  document.getElementById('b-motivos').innerHTML=ranking(data,'motivo','var(--amber)');
+
+  const porProd={};
+  data.filter(b=>b.motivo==='Receta mal preparada').forEach(b=>{porProd[b.prod]=(porProd[b.prod]||0)+1;});
+  const alertas=Object.entries(porProd).filter(([,v])=>v>=2);
+  document.getElementById('b-alertas-card').style.display=alertas.length?'block':'none';
+  document.getElementById('b-alertas').innerHTML=alertas.map(([k,v])=>
+    `<div style="padding:8px 10px;background:var(--red-soft);border-radius:8px;margin-bottom:6px;font-size:13px;color:var(--red);font-weight:600;">"${k}" — ${v} bajas por receta</div>`).join('');
+
+  document.getElementById('b-count').textContent=data.length+' registros';
+  document.getElementById('b-list').innerHTML=data.length
+    ?data.map(b=>histItem(b,'var(--red)','baja')).join('')
+    :'<div class="empty"><div class="icon">📋</div><p>Sin registros.</p></div>';
+}
+
+// ── PRODUCCIÓN ──
+function renderProduccion(){
+  const p=document.getElementById('fp-periodo').value;
+  document.getElementById('fp-rango').style.display=p==='rango'?'flex':'none';
+  let data=[...producciones];
+  const loc=document.getElementById('fp-local').value;
+  if(loc!=='todos')data=data.filter(p=>p.local===loc);
+  data=filtrarFecha(data,'fp-periodo','fp-desde','fp-hasta');
+
+  const hoy=new Date().toDateString();
+  const hoyN=data.filter(p=>getD(p).toDateString()===hoy).length;
+  const total=data.reduce((s,p)=>s+(p.cant||0),0);
+
+  document.getElementById('p-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Registros</div><div class="kpi-value">${data.length}</div><div class="kpi-sub">en el período</div></div>
+    <div class="kpi"><div class="kpi-label">Unidades totales</div><div class="kpi-value">${total}</div><div class="kpi-sub">producidas</div></div>
+    <div class="kpi"><div class="kpi-label">Hoy</div><div class="kpi-value">${hoyN}</div><div class="kpi-sub">registros</div></div>
+    <div class="kpi"><div class="kpi-label">Productos únicos</div><div class="kpi-value">${new Set(data.map(p=>p.prod)).size}</div><div class="kpi-sub">elaborados</div></div>`;
+
+  document.getElementById('p-ranking').innerHTML=ranking(data,'prod','var(--green)');
+  document.getElementById('p-count').textContent=data.length+' registros';
+  document.getElementById('p-list').innerHTML=data.length
+    ?data.map(p=>histItem(p,'var(--green)','prod')).join('')
+    :'<div class="empty"><div class="icon">🍳</div><p>Sin registros.</p></div>';
+}
+
+// ── EMPLEADOS ──
+function setFEmp(el){
+  document.querySelectorAll('#f-emp-local .fchip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active'); filtroEmpLocal=el.dataset.v; renderEmpleados();
+}
+function renderEmpleados(){
+  let data=[...empleados];
+  if(filtroEmpLocal!=='todos') data=data.filter(e=>e.local===filtroEmpLocal);
+  document.getElementById('emp-body').innerHTML=data.length
+    ?data.map(e=>`<tr>
+        <td><b>${e.codigo}</b></td><td>${e.nombre}</td><td>${e.local}</td>
+        <td><span class="badge ${e.estado==='activo'?'badge-green':'badge-gray'}">${e.estado||'activo'}</span></td>
+        <td><button class="btn btn-outline btn-sm" style="color:var(--red);" onclick="eliminarEmp('${e.id}')">✕</button></td>
+      </tr>`).join('')
+    :'<tr><td colspan="5"><div class="empty"><p>Sin empleados registrados.</p></div></td></tr>';
+}
+function abrirModalEmp(){
+  ['emp-nombre','emp-codigo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal-emp').classList.add('open');
+}
+async function guardarEmp(){
+  const nombre=document.getElementById('emp-nombre').value.trim();
+  const codigo=document.getElementById('emp-codigo').value.trim();
+  const local=document.getElementById('emp-local').value;
+  if(!nombre||!codigo){showToast('⚠️ Completa nombre y código');return;}
+  const existe=empleados.find(e=>e.codigo===codigo&&e.local===local);
+  if(existe){showToast('⚠️ Ya existe un empleado con ese código en este local');return;}
+  await addDoc(collection(db,'mg_empleados'),{
+    nombre,codigo,local,
+    estado:document.getElementById('emp-estado').value,
+    creado:serverTimestamp()
+  });
+  cerrarModal('modal-emp');showToast('✅ Empleado agregado');
+}
+async function eliminarEmp(id){
+  if(!confirm('¿Eliminar este empleado?'))return;
+  await deleteDoc(doc(db,'mg_empleados',id));showToast('Empleado eliminado');
+}
+
+// ── TIPS ──
+function renderTips(){
+  const p=document.getElementById('ft-periodo').value;
+  document.getElementById('ft-rango').style.display=p==='rango'?'flex':'none';
+  let data=[...tips];
+  const loc=document.getElementById('ft-local').value;
+  if(loc!=='todos')data=data.filter(t=>t.local===loc);
+  data=filtrarFecha(data,'ft-periodo','ft-desde','ft-hasta');
+  const total=data.reduce((s,t)=>s+(t.total||0),0);
+  const hoy=new Date().toDateString();
+  const hoyTotal=data.filter(t=>getD(t).toDateString()===hoy).reduce((s,t)=>s+(t.total||0),0);
+  document.getElementById('tips-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Total período</div><div class="kpi-value" style="font-size:20px;">$${total.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Hoy</div><div class="kpi-value" style="font-size:20px;">$${hoyTotal.toFixed(2)}</div></div>
+    <div class="kpi"><div class="kpi-label">Registros</div><div class="kpi-value">${data.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Promedio por turno</div><div class="kpi-value" style="font-size:18px;">$${data.length?(total/data.length).toFixed(2):'0.00'}</div></div>`;
+  const porLocal={};data.forEach(t=>{porLocal[t.local]=(porLocal[t.local]||0)+(t.total||0);});
+  const sorted=Object.entries(porLocal).sort((a,b)=>b[1]-a[1]);
+  const mx=sorted[0]?.[1]||1;
+  document.getElementById('tips-ranking').innerHTML=sorted.length
+    ?sorted.map(([l,v])=>`<div class="rank-bar"><div class="rank-label">${l}<span>$${v.toFixed(2)}</span></div>
+      <div class="rank-track"><div class="rank-fill" style="width:${(v/mx*100).toFixed(0)}%;background:var(--green);"></div></div></div>`).join('')
+    :'<div class="empty"><p>Sin datos.</p></div>';
+  document.getElementById('tips-count').textContent=data.length+' registros';
+  document.getElementById('tips-list').innerHTML=data.length
+    ?data.map(t=>{
+      const f=getD(t).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div class="hist-item">
+        <div><div class="hist-name">${t.local}</div>
+        <div class="hist-meta">${f} · ${t.enc}</div>
+        <div class="hist-tags"><span class="badge badge-amber">${t.turno}</span></div></div>
+        <div class="hist-right"><div class="hist-qty" style="color:var(--green);">$${(t.total||0).toFixed(2)}</div></div>
+      </div>`;}).join('')
+    :'<div class="empty"><div class="icon">💵</div><p>Sin registros.</p></div>';
+}
+
+// ── CLOCK IN/OUT ──
+function renderClock(){
+  const p=document.getElementById('fc-periodo').value;
+  document.getElementById('fc-rango').style.display=p==='rango'?'flex':'none';
+  let data=[...clockRecords];
+  const loc=document.getElementById('fc-local').value;
+  if(loc!=='todos')data=data.filter(r=>r.local===loc);
+  data=filtrarFecha(data,'fc-periodo','fc-desde','fc-hasta');
+  const hoy=new Date().toDateString();
+  const hoyData=clockRecords.filter(r=>getD(r).toDateString()===hoy);
+  const activos={};
+  hoyData.forEach(r=>{if(!activos[r.nombre]||getD(r)>getD(activos[r.nombre]))activos[r.nombre]=r;});
+  const trabajando=Object.values(activos).filter(r=>r.tipo==='entrada');
+  document.getElementById('clock-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Registros hoy</div><div class="kpi-value">${hoyData.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Trabajando ahora</div><div class="kpi-value" style="color:var(--green);">${trabajando.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Empleados únicos hoy</div><div class="kpi-value">${new Set(hoyData.map(r=>r.nombre)).size}</div></div>
+    <div class="kpi"><div class="kpi-label">Total período</div><div class="kpi-value">${data.length}</div><div class="kpi-sub">registros</div></div>`;
+  document.getElementById('clock-activos').innerHTML=trabajando.length
+    ?trabajando.map(r=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-2);">
+        <div><b style="font-size:13px;">${r.nombre}</b><div style="font-size:11px;color:var(--gray-4);">${r.local}</div></div>
+        <span class="badge badge-green">Trabajando</span></div>`).join('')
+    :'<div class="empty"><p>Nadie ha marcado entrada hoy.</p></div>';
+  document.getElementById('clock-count').textContent=data.length+' registros';
+  document.getElementById('clock-list').innerHTML=data.length
+    ?data.map(r=>{
+      const f=getD(r).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div class="hist-item">
+        <div><div class="hist-name">${r.nombre}</div>
+        <div class="hist-meta">${f}</div>
+        <div class="hist-tags"><span class="badge badge-gray">${r.local}</span></div></div>
+        <div class="hist-right"><span class="badge ${r.tipo==='entrada'?'badge-green':'badge-red'}">${r.tipo==='entrada'?'✅ Entrada':'🚪 Salida'}</span></div>
+      </div>`;}).join('')
+    :'<div class="empty"><div class="icon">⏰</div><p>Sin registros.</p></div>';
+}
+
+// ── CSV ──
+function exportarCSV(tipo){
+  const data=tipo==='bajas'?bajas:tipo==='prod'?producciones:tipo==='tips'?tips:clockRecords;
+  if(!data.length){showToast('No hay datos');return;}
+  const h=tipo==='bajas'
+    ?['Fecha','Local','Producto','Cantidad','Unidad','Motivo','Encargado']
+    :['Fecha','Local','Producto','Cantidad','Unidad','Turno','Responsable'];
+  const rows=data.map(r=>{
+    const f=getD(r).toLocaleString('es-EC');
+    return(tipo==='bajas'?[f,r.local,r.prod,r.cant,r.unid,r.motivo,r.enc]:[f,r.local,r.prod,r.cant,r.unid,r.turno,r.enc])
+      .map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',');
+  });
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([[h.join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download=`${tipo}-morochos-ec-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+
+// ── EXPONER ──
+window.doLogin=doLogin;window.doLogout=doLogout;window.toggleSidebar=toggleSidebar;
+window.goTo=goTo;window.renderBajas=renderBajas;window.renderProduccion=renderProduccion;
+window.cerrarModal=cerrarModal;window.exportarCSV=exportarCSV;
+window.abrirModalEmp=abrirModalEmp;window.guardarEmp=guardarEmp;window.eliminarEmp=eliminarEmp;
+window.setFEmp=setFEmp;window.renderEmpleados=renderEmpleados;
+window.renderTips=renderTips;window.renderClock=renderClock;
+</script>
+</body>
+</html>

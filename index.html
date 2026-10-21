@@ -774,7 +774,7 @@ function ranking(data,key,color,n=6){
 }
 
 function histItem(r,qtyColor,tipo){
-  const f=getD(r).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const f=mayus(getD(r).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
   const badge=tipo==='baja'
     ?`<span class="badge badge-gray">${r.motivo||''}</span>`
     :`<span class="badge badge-amber">${r.turno||''}</span>`;
@@ -849,7 +849,7 @@ function rankingFrec(data,key,color,n=6){
   </div>`).join(''):'<div class="empty"><p>Sin datos.</p></div>';
 }
 function bajaItem(r){
-  const f=getD(r).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  const f=mayus(getD(r).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
   return `<div class="hist-item" data-baja="${esc(r.id)}">
     <div><div class="hist-name">${esc(r.prod)}</div>
     <div class="hist-meta">${f} · ${esc(r.enc)}</div>
@@ -915,7 +915,8 @@ function renderBajas(){
 }
 
 // ── Detalle de una baja: datos originales (solo lectura) + Responsable y Observación ──
-function fechaHora(ts){const d=ts&&ts.toDate?ts.toDate():(ts?new Date(ts):null);return d&&!isNaN(d)?d.toLocaleString('es-EC',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';}
+const mayus=t=>t?t.charAt(0).toUpperCase()+t.slice(1):t;
+function fechaHora(ts){const d=ts&&ts.toDate?ts.toDate():(ts?new Date(ts):null);return d&&!isNaN(d)?mayus(d.toLocaleString('es-EC',{weekday:'long',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})):'';}
 function abrirBaja(id){
   const r=RAW.bajas.find(x=>x.id===id); if(!r) return;
   const fila=(k,v)=>v===''||v==null?'':`<div class="bd-row"><span>${k}</span><b>${v}</b></div>`;
@@ -959,7 +960,7 @@ function renderProduccion(){
   document.getElementById('p-count').textContent=data.length+' registros';
   document.getElementById('p-list').innerHTML=data.length
     ?data.map(r=>{
-        const f=getD(r).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+        const f=mayus(getD(r).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
         return `<div class="hist-item"><div><div class="hist-name">${esc(r.prod)}</div>
           <div class="hist-meta">${f}${r.enc?' · '+esc(r.enc):''}${r.lote?' · Lote '+esc(r.lote):''}</div>
           <div class="hist-tags"><span class="badge badge-blue">${esc(areaDe(r))}</span><span class="badge badge-gray">${esc(r.local)}</span>${r.turno?`<span class="badge badge-amber">${esc(r.turno)}</span>`:''}</div></div>
@@ -1033,7 +1034,7 @@ function renderTips(){
   document.getElementById('tips-count').textContent=data.length+' registros';
   document.getElementById('tips-list').innerHTML=data.length
     ?data.map(t=>{
-      const f=getD(t).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      const f=mayus(getD(t).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
       return `<div class="hist-item">
         <div><div class="hist-name">${t.local}</div>
         <div class="hist-meta">${f} · ${t.enc}</div>
@@ -1069,7 +1070,7 @@ function renderClock(){
   document.getElementById('clock-count').textContent=data.length+' registros';
   document.getElementById('clock-list').innerHTML=data.length
     ?data.map(r=>{
-      const f=getD(r).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      const f=mayus(getD(r).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
       return `<div class="hist-item">
         <div><div class="hist-name">${r.nombre}</div>
         <div class="hist-meta">${f}</div>
@@ -1093,7 +1094,7 @@ function renderGuias(){
   const L={despachado:['Por recibir','badge-amber'],recibido_ok:['Recibido OK','badge-green'],recibido_diferencias:['Con diferencias','badge-red']};
   w.innerHTML=g.length?g.slice(0,30).map(x=>{const [t,c]=L[x.estado]||[x.estado,'badge-amber'];
     const dif=(x.items||[]).filter(i=>i.diferencia);
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;"><div><div class="hist-name">${esc(normLocal(x.local))}</div><div class="hist-meta">${getD(x).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})} · despachó ${esc(x.despachado_por||'—')}${x.recibido_por?' · recibió '+esc(x.recibido_por):''} · ${(x.items||[]).length} productos</div></div><span class="badge ${c}">${t}</span></div>${dif.map(i=>`<div style="font-size:13px;color:var(--red);padding:3px 0;">${esc(i.producto_nombre)}: despachado ${esc(i.cantidad_despachada)}, recibido ${esc(i.cantidad_recibida)} (${esc(i.diferencia)}) ${esc(i.nota_diferencia||'')}</div>`).join('')}</div>`;}).join(''):'<div class="empty"><p>Sin despachos.</p></div>';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border);"><div style="display:flex;justify-content:space-between;gap:10px;"><div><div class="hist-name">${esc(normLocal(x.local))}</div><div class="hist-meta">${mayus(getD(x).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}))} · despachó ${esc(x.despachado_por||'—')}${x.recibido_por?' · recibió '+esc(x.recibido_por):''} · ${(x.items||[]).length} productos</div></div><span class="badge ${c}">${t}</span></div>${dif.map(i=>`<div style="font-size:13px;color:var(--red);padding:3px 0;">${esc(i.producto_nombre)}: despachado ${esc(i.cantidad_despachada)}, recibido ${esc(i.cantidad_recibida)} (${esc(i.diferencia)}) ${esc(i.nota_diferencia||'')}</div>`).join('')}</div>`;}).join(''):'<div class="empty"><p>Sin despachos.</p></div>';
 }
 function renderPedidos(){
   const p=document.getElementById('fpe-periodo').value;
@@ -1123,7 +1124,7 @@ function renderPedidos(){
   renderGuias();
   document.getElementById('pe-count').textContent=data.length+' pedidos';
   document.getElementById('pe-list').innerHTML=data.length?data.map(x=>{
-    const f=getD(x).toLocaleDateString('es-EC',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    const f=mayus(getD(x).toLocaleDateString('es-EC',{weekday:'long',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}));
     const est=x.estado||'enviado';const EST_LAB={por_aprobar:'Por aprobar',rechazado:'Rechazado',enviado:'Enviado a Facility',en_proceso:'En proceso',procesado:'Procesado'};
     const lineas=(x.items||[]).map(i=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px solid var(--gray-2);"><span>${esc(i.producto_nombre)}</span><b>${esc(qEf(x,i))} ${esc(i.unidad_medida)}</b></div>`).join('');
     return `<div style="padding:12px 0;border-bottom:1px solid var(--border);">

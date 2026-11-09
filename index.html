@@ -207,8 +207,13 @@
     </div>
     <div class="login-field">
       <label>Contraseña</label>
-      <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"
-        onkeydown="if(event.key==='Enter')doLogin()"/>
+      <div style="position:relative;">
+        <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:48px;"
+          onkeydown="if(event.key==='Enter')doLogin()"/>
+        <button type="button" id="l-ojo" aria-label="Mostrar contraseña" title="Mostrar contraseña"
+          onclick="var i=document.getElementById('l-pass'),v=i.type==='password';i.type=v?'text':'password';this.textContent=v?'🙈':'👁';this.title=v?'Ocultar contraseña':'Mostrar contraseña';"
+          style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:none;background:none;font-size:18px;cursor:pointer;">👁</button>
+      </div>
     </div>
     <button class="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-err" id="l-err">Usuario o contraseña incorrectos</div>
@@ -693,16 +698,19 @@ function cambiarScope(){
 const MODULOS=['dashboard','bajas','produccion','recepcion','checklists','rrhh','tips','clock','hoy','pedidos'];
 async function cargarRol(email){
   const snap=await getDoc(doc(db,'manager_usuarios',email.toLowerCase()));
-  if(!snap.exists()) return null;
+  if(!snap.exists()){ MOTIVO='No hay un documento con el ID «'+email.toLowerCase()+'» en manager_usuarios (revisa que el ID sea idéntico al correo, en minúsculas).'; return null; }
   const d=snap.data(),base={nombre:d.nombre||email,local:'',email:email.toLowerCase(),perfil:d.rol};
-  const lista=Array.isArray(d.modulos)?d.modulos.filter(m=>MODULOS.includes(m)):null;
+  const mods=Array.isArray(d.modulos)?d.modulos:(typeof d.modulos==='string'?d.modulos.split(/[,\s]+/):(d.modulos&&typeof d.modulos==='object'?Object.values(d.modulos):null));   // acepta array, texto "bajas,recepcion" o mapa
+  const lista=mods?mods.map(m=>String(m).trim().toLowerCase()).filter(m=>MODULOS.includes(m)):null;
   const rrhhOk=d.rol==='oficina'||d.rol==='rrhh';
   if(d.rol==='oficina') return {...base,rol:'oficina',modulos:lista&&lista.length?lista:MODULOS};
   if(d.rol==='encargado' && LOCALES_MGR.includes(d.local)) return {...base,rol:'encargado',local:d.local,modulos:(lista&&lista.length?lista:MODULOS).filter(m=>m!=='rrhh')};
   if(d.rol==='rrhh') return {...base,rol:'oficina',etiqueta:'Recursos Humanos',modulos:lista&&lista.length?lista:['rrhh','clock']};
   if(lista&&lista.length) return {...base,rol:'oficina',etiqueta:'Equipo',modulos:lista.filter(m=>m!=='rrhh'||rrhhOk)};
+  MOTIVO='El documento existe pero le falta información: «rol» debe ser oficina, encargado, rrhh o equipo (escrito en minúsculas), y con «equipo» el campo «modulos» debe traer al menos un módulo válido (bajas, recepcion, produccion, checklists, tips, clock, dashboard…). Encargado necesita «local» = La Victoria o El Salado.';
   return null;
 }
+let MOTIVO='';
 const permitido=id=>!ctx||(ctx.modulos||MODULOS).includes(id);
 function errLogin(m){ const e=document.getElementById('l-err'); e.textContent=m; e.style.display='block'; }
 async function doLogin(){
@@ -724,7 +732,7 @@ onAuthStateChanged(auth,async u=>{
   if(!u){ ctx=null; appAbierta=false; document.getElementById('app').classList.remove('visible'); document.getElementById('login-wrap').style.display='flex'; return; }
   try{
     const c=await cargarRol(u.email||'');
-    if(!c){ errLogin('Este usuario no tiene acceso a Manager EC. Pídele a la oficina que lo registre.'); await signOut(auth); return; }
+    if(!c){ errLogin('Este usuario no tiene acceso a Manager EC. '+MOTIVO); await signOut(auth); return; }
     if(appAbierta) return;
     ctx=c; abrirApp();
   }catch(e){ console.error(e); errLogin('No se pudo verificar el acceso. Revisa tu conexión.'); await signOut(auth); }

@@ -701,13 +701,17 @@ async function cargarRol(email){
   if(!snap.exists()){ MOTIVO='No hay un documento con el ID «'+email.toLowerCase()+'» en manager_usuarios (revisa que el ID sea idéntico al correo, en minúsculas).'; return null; }
   const d=snap.data(),base={nombre:d.nombre||email,local:'',email:email.toLowerCase(),perfil:d.rol};
   const mods=Array.isArray(d.modulos)?d.modulos:(typeof d.modulos==='string'?d.modulos.split(/[,\s]+/):(d.modulos&&typeof d.modulos==='object'?Object.values(d.modulos):null));   // acepta array, texto "bajas,recepcion" o mapa
-  const lista=mods?mods.map(m=>String(m).trim().toLowerCase()).filter(m=>MODULOS.includes(m)):null;
+  const norm=x=>String(x==null?'':x).normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+  const ALIAS={recepciones:'recepcion',producciones:'produccion',baja:'bajas',checklist:'checklists',tip:'tips',turno:'clock',marcaciones:'clock',asistencia:'clock',recursoshumanos:'rrhh','recursos humanos':'rrhh'};
+  const lista=mods?mods.map(m=>{const n=norm(m);return ALIAS[n]||n;}).filter(m=>MODULOS.includes(m)):null;
+  d.rol=norm(d.rol);base.perfil=d.rol;
+  const leido=' Leí: rol=«'+(d.rol||'(vacío)')+'», modulos='+(mods?'«'+mods.join(', ')+'»':'(no existe o no es lista)')+(d.local?', local=«'+d.local+'»':'')+'.';
   const rrhhOk=d.rol==='oficina'||d.rol==='rrhh';
   if(d.rol==='oficina') return {...base,rol:'oficina',modulos:lista&&lista.length?lista:MODULOS};
   if(d.rol==='encargado' && LOCALES_MGR.includes(d.local)) return {...base,rol:'encargado',local:d.local,modulos:(lista&&lista.length?lista:MODULOS).filter(m=>m!=='rrhh')};
   if(d.rol==='rrhh') return {...base,rol:'oficina',etiqueta:'Recursos Humanos',modulos:lista&&lista.length?lista:['rrhh','clock']};
   if(lista&&lista.length) return {...base,rol:'oficina',etiqueta:'Equipo',modulos:lista.filter(m=>m!=='rrhh'||rrhhOk)};
-  MOTIVO='El documento existe pero le falta información: «rol» debe ser oficina, encargado, rrhh o equipo (escrito en minúsculas), y con «equipo» el campo «modulos» debe traer al menos un módulo válido (bajas, recepcion, produccion, checklists, tips, clock, dashboard…). Encargado necesita «local» = La Victoria o El Salado.';
+  MOTIVO='El documento existe pero le falta información: «rol» debe ser oficina, encargado, rrhh o equipo (escrito en minúsculas), y con «equipo» el campo «modulos» debe traer al menos un módulo válido (bajas, recepcion, produccion, checklists, tips, clock, dashboard…). Encargado necesita «local» = La Victoria o El Salado.'+leido;
   return null;
 }
 let MOTIVO='';

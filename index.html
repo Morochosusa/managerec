@@ -257,7 +257,7 @@
         <span class="ni">👥</span><span class="nl">Recursos Humanos</span>
       </button>
       <div class="rrhh-sub" id="rrhh-sub" style="display:none;">
-        <button class="rrhh-sb" data-s="legajo" onclick="rrhhIr('legajo')"><span>1. Legajo</span><small>En construcción</small></button>
+        <button class="rrhh-sb" data-s="legajo" onclick="rrhhIr('legajo')"><span>1. Miembros equipo</span><small>En construcción</small></button>
         <button class="rrhh-sb" data-s="reclutamiento" onclick="rrhhIr('reclutamiento')"><span>2. Reclutamiento</span><small>Vista previa</small></button>
         <button class="rrhh-sb" data-s="asistencia" onclick="rrhhIr('asistencia')"><span>3. Asistencia</span><small>Conectado</small></button>
         <button class="rrhh-sb" data-s="vacaciones" onclick="rrhhIr('vacaciones')"><span>4. Vacaciones</span><small>Pendiente</small></button>
@@ -268,7 +268,7 @@
         <span class="ni">💵</span><span class="nl">Tips</span>
       </button>
       <button class="nav-item" id="nav-clock" onclick="goTo('clock')">
-        <span class="ni">⏰</span><span class="nl">Clock In/Out</span>
+        <span class="ni">⏰</span><span class="nl">Asistencia</span>
       </button>
       <div class="nav-section-title nl">En desarrollo</div>
       <button class="nav-item" id="nav-hoy" onclick="showToast('🔒 Revisión del día está en desarrollo. Pronto estará disponible.')" style="opacity:.55;">
@@ -549,8 +549,8 @@
 
 <!-- MODAL EMPLEADO -->
 <div class="modal-overlay" id="modal-emp">
-  <div class="modal-box">
-    <div class="modal-title" id="emp-title">Nuevo empleado</div>
+  <div class="modal-box" style="max-height:92vh;overflow-y:auto;">
+    <div class="modal-title" id="emp-title">Nuevo miembro del equipo</div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Nombre completo</label>
         <input type="text" id="emp-nombre" class="form-control" placeholder="Nombre del empleado"/></div>
@@ -565,9 +565,15 @@
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Fecha de ingreso</label>
-        <input type="month" id="emp-ingreso" class="form-control"/></div>
+        <input type="date" id="emp-ingreso" class="form-control"/></div>
       <div class="form-group"><label class="form-label">Reporta a</label>
         <input type="text" id="emp-reporta" class="form-control" placeholder="Nombre del jefe"/></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Lugar de trabajo</label>
+        <input type="text" id="emp-lugar" class="form-control" placeholder="Ej: Cocina, caja, bodega"/></div>
+      <div class="form-group"><label class="form-label">Correo electrónico</label>
+        <input type="email" id="emp-correo" class="form-control" placeholder="correo@ejemplo.com" autocapitalize="off"/></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Cédula</label>
@@ -575,6 +581,15 @@
       <div class="form-group"><label class="form-label">Teléfono</label>
         <input type="tel" id="emp-telefono" class="form-control"/></div>
     </div>
+    <div style="font-size:12px;font-weight:700;color:var(--gray-4);text-transform:uppercase;margin:4px 0 8px;">Contacto de emergencia</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre</label>
+        <input type="text" id="emp-emerg-nombre" class="form-control" placeholder="Nombre completo"/></div>
+      <div class="form-group"><label class="form-label">Teléfono</label>
+        <input type="tel" id="emp-emerg-tel" class="form-control"/></div>
+    </div>
+    <div class="form-group"><label class="form-label">Parentesco</label>
+      <input type="text" id="emp-emerg-par" class="form-control" placeholder="Ej: madre, esposo, hermana"/></div>
     <div class="form-group"><label class="form-label">Estado</label>
       <select id="emp-estado" class="form-control">
         <option value="activo">Activo</option><option value="inactivo">Inactivo (ya no marca turno)</option>
@@ -693,7 +708,7 @@ function cambiarScope(){
 }
 
 // Módulos de Manager EC. Cada usuario (manager_usuarios/{correo}) tiene un rol y, si se quiere, una lista propia "modulos".
-//   oficina  → todo · encargado → todo menos Recursos Humanos, solo su local · rrhh → Recursos Humanos + Clock In/Out
+//   oficina  → todo · encargado → todo menos Recursos Humanos, solo su local · rrhh → Recursos Humanos + Asistencia
 //   cualquier otro rol (p. ej. "equipo") → solo los módulos de su lista "modulos"
 const MODULOS=['dashboard','bajas','produccion','recepcion','checklists','rrhh','tips','clock','hoy','pedidos'];
 async function cargarRol(email){
@@ -762,6 +777,7 @@ function abrirApp(){
   if(tit)tit.style.display=hay?'':'none';
   if(!(ctx.modulos||[]).some(m=>['bajas','produccion','recepcion','checklists','tips','clock','pedidos','hoy','dashboard'].includes(m)))
     {document.getElementById('sc-local').style.display='none';document.getElementById('sc-est').style.display='none';}
+  {const nc=document.getElementById('nav-clock');if(nc)nc.style.display=permitido('rrhh')?'none':'';}
   RR.ok=permitido('rrhh')&&(ctx.perfil==='oficina'||ctx.perfil==='rrhh'); RR.user=ctx;
   if(RR.ok) rrhhEscuchar();
   iniciarApp();
@@ -788,7 +804,7 @@ function goTo(id){
   document.getElementById('page-'+id).classList.add('active');
   document.getElementById('nav-'+id).classList.add('active');
   const titles={dashboard:'Dashboard',bajas:'Bajas',produccion:'Producción',recepcion:'Recepción',
-    rrhh:'Recursos Humanos',tips:'Tips',clock:'Clock In/Out',
+    rrhh:'Recursos Humanos',tips:'Tips',clock:'Asistencia',
     pedidos:'Pedidos a Facility',checklists:'Checklists',hoy:'Revisión del día'};
   document.getElementById('topbar-title').textContent=titles[id]||id;
   if(id==='dashboard') renderDashboard();
@@ -1159,10 +1175,10 @@ document.getElementById('r-list').addEventListener('click',e=>{const it=e.target
 document.getElementById('mr-cerrar').addEventListener('click',()=>cerrarModal('modal-rec'));
 document.getElementById('modal-rec').addEventListener('click',e=>{if(e.target.id==='modal-rec')cerrarModal('modal-rec');});
 
-// ── RECURSOS HUMANOS ──  1 Legajo (real) · 2 Reclutamiento (vista previa) · 3 Asistencia (= Clock In/Out) · 4-6 pendientes
+// ── RECURSOS HUMANOS ──  1 Miembros equipo (real) · 2 Reclutamiento (vista previa) · 3 Asistencia · 4-6 pendientes
 // Los datos sensibles (legajos y documentos) solo se leen/escriben con sesión (reglas: rrhh_legajos, rrhh_docs). Marcaciones siguen usando mg_empleados (código + local).
 const RR_MODS=[
-  {id:'legajo',n:1,label:'Legajo del empleado',short:'Legajo',status:'En construcción'},
+  {id:'legajo',n:1,label:'Miembros del equipo',short:'Miembros',status:'En construcción'},
   {id:'reclutamiento',n:2,label:'Reclutamiento y contratación',short:'Reclutamiento',status:'Vista previa'},
   {id:'asistencia',n:3,label:'Asistencia y marcaciones',short:'Asistencia',status:'Conectado'},
   {id:'vacaciones',n:4,label:'Vacaciones y permisos',short:'Vacaciones',status:'Pendiente'},
@@ -1182,9 +1198,9 @@ const RC_CAND=[{id:'c1',n:'Andrea Lema',v:'Cajera/o · La Victoria',f:'18/10/202
 const RC_ENT=[['Andrea Lema','22/10/2026 · 10:00','Lucía Andrade','La Victoria','Agendada'],['Paola Ortiz','23/10/2026 · 15:00','Carla Vera','La Victoria','Por confirmar'],['Iván Cajas','19/10/2026 · 11:00','Carla Vera','El Salado','Realizada']];
 const RC_PRE=[['Cajera/o',['¿Ha trabajado antes con caja o atención al público?','¿Qué haría si el cierre de caja no cuadra?','¿Qué horarios puede cubrir, incluidos fines de semana?']],['Cocinero/a',['¿Qué platos sabe preparar y para cuántas personas?','¿Cómo cuida la limpieza y la cadena de frío al trabajar?','¿Ha trabajado turnos de ocho horas?']]];
 const RC_VDOCS=['Cédula de identidad','Hoja de vida','Referencias laborales','Certificado de salud','Foto'];
-const RC_PASOS=['Oferta enviada','Oferta aceptada','Documentos verificados','Contrato firmado','Legajo del empleado creado','Aviso a la contadora','Pasos del primer día'];
+const RC_PASOS=['Oferta enviada','Oferta aceptada','Documentos verificados','Contrato firmado','Miembro del equipo creado','Aviso a la contadora','Pasos del primer día'];
 const rrChip=e=>['Abierta','Verificado','Hecho','Realizada','Agendada','Entrevista agendada','Cargado','Completo'].includes(e)?'badge-green':['Nueva','En revisión','Por confirmar','En construcción','Vista previa'].includes(e)?'badge-amber':['Descartada','Falta'].includes(e)?'badge-red':'badge-gray';
-const rrMes=m=>{const x=String(m||'').split('-');return x.length===2?x[1]+'/'+x[0]:(m||'—');};
+const rrMes=m=>{const x=String(m||'').split('-');return x.length===3?x[2]+'/'+x[1]+'/'+x[0]:x.length===2?x[1]+'/'+x[0]:(m||'—');};
 const rrTabla=(heads,rows)=>'<div class="table-wrap"><table><thead><tr>'+heads.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
 
 function rrhhEscuchar(){
@@ -1215,26 +1231,26 @@ function rrhhRender(){
   root.innerHTML=h;
 }
 function rrEmps(){
-  return empleados.map(e=>{const l=RR.leg[e.id]||{};return {...e,cargo:l.cargo||'',ingreso:l.ingreso||'',reporta:l.reporta||'',cedula:l.cedula||'',telefono:l.telefono||'',docs:l.docs||{}};});
+  return empleados.map(e=>{const l=RR.leg[e.id]||{};return {...e,cargo:l.cargo||'',ingreso:l.ingreso||'',reporta:l.reporta||'',cedula:l.cedula||'',telefono:l.telefono||'',docs:l.docs||{},lugar:l.lugar||'',correo:l.correo||'',emNombre:l.emergencia_nombre||'',emTel:l.emergencia_telefono||'',emPar:l.emergencia_parentesco||''};});
 }
 function rrLegajo(){
   const all=rrEmps(),lista=all.filter(e=>RR.local==='todos'||e.local===RR.local);
   const sel=all.find(e=>e.id===RR.sel)||lista[0]||null,tot=RR_DOCS.length;
   let h='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;"><div class="filter-bar" style="margin:0;">'+
     ['todos',...RR_LOCALES].map(l=>'<button class="btn btn-sm '+(RR.local===l?'btn-black':'btn-outline')+'" data-rr="local" data-v="'+esc(l)+'">'+(l==='todos'?'Todos':esc(l))+'</button>').join('')+
-    '</div><button class="btn btn-black btn-sm" data-rr="nuevo">+ Nuevo empleado</button></div>';
+    '</div><button class="btn btn-black btn-sm" data-rr="nuevo">+ Nuevo miembro</button></div>';
   h+='<p style="font-size:12px;color:var(--gray-4);margin-bottom:12px;">El código es el que usa cada persona para marcar entrada y salida en el ⏰ de Morochos OS. Los documentos exactos los define Álvaro Lucero.</p>';
-  if(!lista.length)return h+'<div class="empty"><div class="icon">🪪</div><p>Sin empleados registrados. Toca “+ Nuevo empleado”.</p></div>';
-  h+='<div class="table-wrap"><table><thead><tr><th>Empleado</th><th>Local</th><th>Ingreso</th><th>Documentos</th></tr></thead><tbody>'+lista.map(e=>{
+  if(!lista.length)return h+'<div class="empty"><div class="icon">🪪</div><p>Sin miembros del equipo registrados. Toca “+ Nuevo miembro”.</p></div>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Miembro</th><th>Lugar de trabajo</th><th>Ingreso</th><th>Documentos</th></tr></thead><tbody>'+lista.map(e=>{
     const n=RR_DOCS.filter(d=>e.docs[d[0]]).length,pc=Math.round(n/tot*100);
-    return '<tr data-rr="sel" data-id="'+esc(e.id)+'" style="cursor:pointer;'+(sel&&sel.id===e.id?'background:var(--gray-1);':'')+'"><td><b>'+esc(e.nombre)+'</b>'+(e.estado==='inactivo'?' <span class="badge badge-gray">Inactivo</span>':'')+'<div style="font-size:12px;color:var(--gray-4);">'+esc(e.cargo||'Sin cargo')+'</div></td><td>'+esc(e.local)+'</td><td>'+rrMes(e.ingreso)+'</td>'+
+    return '<tr data-rr="sel" data-id="'+esc(e.id)+'" style="cursor:pointer;'+(sel&&sel.id===e.id?'background:var(--gray-1);':'')+'"><td><b>'+esc(e.nombre)+'</b>'+(e.estado==='inactivo'?' <span class="badge badge-gray">Inactivo</span>':'')+'<div style="font-size:12px;color:var(--gray-4);">'+esc(e.cargo||'Sin cargo')+'</div></td><td>'+esc(e.lugar||e.local)+(e.lugar?'<div style="font-size:12px;color:var(--gray-4);">'+esc(e.local)+'</div>':'')+'</td><td>'+rrMes(e.ingreso)+'</td>'+
       '<td style="min-width:130px;"><div class="rank-track"><div class="rank-fill" style="width:'+pc+'%;background:'+(n===tot?'var(--green)':'var(--amber)')+';"></div></div><div style="font-size:11px;color:var(--gray-4);margin-top:3px;">'+n+' de '+tot+' documentos</div></td></tr>';}).join('')+'</tbody></table></div>';
   if(sel){
     const n=RR_DOCS.filter(d=>sel.docs[d[0]]).length,ok=n===tot;
-    h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;">Ficha del empleado</div><div style="font-size:22px;font-weight:800;">'+esc(sel.nombre)+'</div><div style="font-size:13px;color:var(--gray-4);">'+esc(sel.cargo||'Sin cargo')+' · '+esc(sel.local)+'</div></div>'+
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span class="badge '+(ok?'badge-green':'badge-red')+'">'+(ok?'Legajo completo':'Faltan '+(tot-n)+' documentos')+'</span><button class="btn btn-outline btn-sm" data-rr="editar" data-id="'+esc(sel.id)+'">✎ Editar</button></div></div>'+
+    h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;"><div><div style="font-size:11px;font-weight:700;color:var(--gray-4);text-transform:uppercase;">Ficha del miembro del equipo</div><div style="font-size:22px;font-weight:800;">'+esc(sel.nombre)+'</div><div style="font-size:13px;color:var(--gray-4);">'+esc(sel.cargo||'Sin cargo')+' · '+esc(sel.local)+'</div></div>'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><span class="badge '+(ok?'badge-green':'badge-red')+'">'+(ok?'Documentos completos':'Faltan '+(tot-n)+' documentos')+'</span><button class="btn btn-outline btn-sm" data-rr="editar" data-id="'+esc(sel.id)+'">✎ Editar</button></div></div>'+
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0;">'+
-      [['Fecha de ingreso',rrMes(sel.ingreso)],['Cargo',sel.cargo||'—'],['Local',sel.local],['Reporta a',sel.reporta||'—'],['Código de marcación',sel.codigo],['Cédula',sel.cedula||'—'],['Teléfono',sel.telefono||'—'],['Estado',sel.estado==='inactivo'?'Inactivo':'Activo']].map(f=>'<div><div style="font-size:12px;color:var(--gray-4);">'+f[0]+'</div><b style="font-size:14px;">'+esc(f[1])+'</b></div>').join('')+'</div>'+
+      [['Fecha de ingreso',rrMes(sel.ingreso)],['Cargo',sel.cargo||'—'],['Local',sel.local],['Lugar de trabajo',sel.lugar||'—'],['Correo',sel.correo||'—'],['Contacto de emergencia',sel.emNombre?(sel.emNombre+(sel.emPar?' ('+sel.emPar+')':'')+(sel.emTel?' · '+sel.emTel:'')):'—'],['Reporta a',sel.reporta||'—'],['Código de marcación',sel.codigo],['Cédula',sel.cedula||'—'],['Teléfono',sel.telefono||'—'],['Estado',sel.estado==='inactivo'?'Inactivo':'Activo']].map(f=>'<div><div style="font-size:12px;color:var(--gray-4);">'+f[0]+'</div><b style="font-size:14px;">'+esc(f[1])+'</b></div>').join('')+'</div>'+
       '<b style="font-size:13px;">Documentos digitalizados</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px;">'+RR_DOCS.map(d=>{const x=sel.docs[d[0]];
         const busy=RR.up===sel.id+'__'+d[0];
         return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;"><span>'+d[1]+'</span><span class="badge '+(x?'badge-green':'badge-red')+'">'+(x?'Cargado':'Falta')+'</span></div>'+
@@ -1267,10 +1283,10 @@ function abrirModalEmp(id){
   if(!RR.ok){showToast('🔒 No tienes acceso a Recursos Humanos');return;}
   rrEdit=typeof id==='string'?id:null;
   const e=rrEdit?rrEmps().find(x=>x.id===rrEdit):null,v=(k,d)=>e?(e[k]||''):(d||'');
-  document.getElementById('emp-title').textContent=e?'Editar empleado':'Nuevo empleado';
+  document.getElementById('emp-title').textContent=e?'Editar miembro del equipo':'Nuevo miembro del equipo';
   const set=(i,x)=>{document.getElementById(i).value=x;};
   set('emp-nombre',v('nombre'));set('emp-codigo',v('codigo'));set('emp-local',e?e.local:(RR.local!=='todos'?RR.local:RR_LOCALES[0]));
-  set('emp-cargo',v('cargo'));set('emp-ingreso',v('ingreso'));set('emp-reporta',v('reporta'));set('emp-cedula',v('cedula'));set('emp-telefono',v('telefono'));set('emp-estado',e?(e.estado||'activo'):'activo');
+  set('emp-cargo',v('cargo'));set('emp-ingreso',v('ingreso'));set('emp-reporta',v('reporta'));set('emp-cedula',v('cedula'));set('emp-telefono',v('telefono'));set('emp-lugar',v('lugar'));set('emp-correo',v('correo'));set('emp-emerg-nombre',v('emNombre'));set('emp-emerg-tel',v('emTel'));set('emp-emerg-par',v('emPar'));set('emp-estado',e?(e.estado||'activo'):'activo');
   document.getElementById('modal-emp').classList.add('open');
 }
 async function guardarEmp(){
@@ -1284,7 +1300,7 @@ async function guardarEmp(){
     const base={nombre,codigo,local,estado:g('emp-estado')||'activo'};
     const id=rrEdit||doc(collection(db,'mg_empleados')).id;
     await setDoc(doc(db,'mg_empleados',id),rrEdit?base:{...base,creado:serverTimestamp()},{merge:true});
-    await setDoc(doc(db,'rrhh_legajos',id),{cargo:g('emp-cargo'),ingreso:g('emp-ingreso'),reporta:g('emp-reporta'),cedula:g('emp-cedula'),telefono:g('emp-telefono'),actualizado:serverTimestamp()},{merge:true});
+    await setDoc(doc(db,'rrhh_legajos',id),{cargo:g('emp-cargo'),ingreso:g('emp-ingreso'),reporta:g('emp-reporta'),cedula:g('emp-cedula'),telefono:g('emp-telefono'),lugar:g('emp-lugar'),correo:g('emp-correo'),emergencia_nombre:g('emp-emerg-nombre'),emergencia_telefono:g('emp-emerg-tel'),emergencia_parentesco:g('emp-emerg-par'),actualizado:serverTimestamp()},{merge:true});
     RR.sel=id;cerrarModal('modal-emp');
   }catch(e){console.error(e);showToast('❌ No se pudo guardar. Revisa tu sesión y conexión.');}
   RR.guard=false;rrhhRender();

@@ -141,6 +141,7 @@
   .rrhh-sub{padding:2px 0 6px 14px;}
   .rrhh-sb{display:flex;width:100%;align-items:center;justify-content:space-between;gap:6px;background:none;border:none;padding:8px 10px;font-size:12.5px;border-radius:8px;cursor:pointer;text-align:left;font-family:inherit;color:var(--gray-5);}
   .rrhh-sb:hover{background:var(--gray-1);} .rrhh-sb.on{background:var(--gray-1);color:var(--black);font-weight:700;}
+  .rrhh-ss{padding-left:26px;font-size:12px;} .rrhh-ss span::before{content:'· ';}
   .rrhh-sb small{font-size:10px;font-weight:600;color:var(--gray-4);white-space:nowrap;}
   .sidebar.collapsed .rrhh-sub{display:none !important;}
 
@@ -260,6 +261,9 @@
         <button class="rrhh-sb" data-s="legajo" onclick="rrhhIr('legajo')"><span>1. Miembros equipo</span><small>En construcción</small></button>
         <button class="rrhh-sb" data-s="reclutamiento" onclick="rrhhIr('reclutamiento')"><span>2. Reclutamiento</span><small>Vista previa</small></button>
         <button class="rrhh-sb" data-s="asistencia" onclick="rrhhIr('asistencia')"><span>3. Asistencia</span><small>Conectado</small></button>
+        <button class="rrhh-sb rrhh-ss" data-ck-nav="marc"><span>Marcaciones</span></button>
+        <button class="rrhh-sb rrhh-ss" data-ck-nav="workday"><span>Jornada diaria</span></button>
+        <button class="rrhh-sb rrhh-ss" data-ck-nav="timecards"><span>Tarjetas de horas</span></button>
         <button class="rrhh-sb" data-s="vacaciones" onclick="rrhhIr('vacaciones')"><span>4. Vacaciones</span><small>Pendiente</small></button>
         <button class="rrhh-sb" data-s="nomina" onclick="rrhhIr('nomina')"><span>5. Nómina</span><small>Pendiente</small></button>
         <button class="rrhh-sb" data-s="cumplimiento" onclick="rrhhIr('cumplimiento')"><span>6. Cumplimiento</span><small>Pendiente</small></button>
@@ -499,6 +503,8 @@
 
       <!-- ═══ CLOCK IN/OUT ═══ -->
       <div class="page" id="page-clock">
+        <div id="ck-equipo" style="display:none;"></div>
+        <div id="ck-marc">
         <div class="filter-bar">
           <select id="fc-local" onchange="renderClock()">
             <option value="todos">Todos los locales</option>
@@ -527,6 +533,7 @@
             <span id="clock-count" style="font-size:12px;color:var(--gray-4);"></span>
           </div>
           <div id="clock-list"></div>
+        </div>
         </div>
       </div>
 
@@ -570,6 +577,8 @@
         <select id="emp-local" class="form-control"><option>El Salado</option><option>La Victoria</option><option>Facility</option></select></div>
       <div class="form-group"><label class="form-label">Cargo</label>
         <input type="text" id="emp-cargo" class="form-control" placeholder="Ej: Cocinero"/></div>
+      <div class="form-group"><label class="form-label">Valor por hora (USD)</label>
+        <input type="number" step="0.01" min="0" id="emp-vhora" class="form-control" placeholder="Ej: 3.50"/></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Fecha de ingreso</label>
@@ -1536,7 +1545,7 @@ function rrhhEscuchar(){
     e=>{console.error('rrhh_legajos',e);RR.err='No se pudieron leer los legajos (¿reglas sin publicar?).';rrhhRender();});
 }
 function rrhhIr(sec){
-  if(sec==='asistencia'){RR.sec='asistencia';goTo('clock');return;}
+  if(sec==='asistencia'){RR.sec='asistencia';ckNav('marc');return;}
   RR.sec=sec;goTo('rrhh');
 }
 function rrhhRender(){
@@ -1558,7 +1567,7 @@ function rrhhRender(){
   root.innerHTML=h;
 }
 function rrEmps(){
-  return empleados.map(e=>{const l=RR.leg[e.id]||{};return {...e,cargo:l.cargo||'',ingreso:l.ingreso||'',reporta:l.reporta||'',cedula:l.cedula||'',telefono:l.telefono||'',docs:l.docs||{},lugar:l.lugar||'',correo:l.correo||'',emNombre:l.emergencia_nombre||'',emTel:l.emergencia_telefono||'',emPar:l.emergencia_parentesco||''};});
+  return empleados.map(e=>{const l=RR.leg[e.id]||{};return {...e,cargo:l.cargo||'',valor_hora:l.valor_hora===undefined?'':l.valor_hora,ingreso:l.ingreso||'',reporta:l.reporta||'',cedula:l.cedula||'',telefono:l.telefono||'',docs:l.docs||{},lugar:l.lugar||'',correo:l.correo||'',emNombre:l.emergencia_nombre||'',emTel:l.emergencia_telefono||'',emPar:l.emergencia_parentesco||''};});
 }
 function rrLegajo(){
   const all=rrEmps(),lista=all.filter(e=>RR.local==='todos'||e.local===RR.local);
@@ -1613,7 +1622,7 @@ function abrirModalEmp(id){
   document.getElementById('emp-title').textContent=e?'Editar miembro del equipo':'Nuevo miembro del equipo';
   const set=(i,x)=>{document.getElementById(i).value=x;};
   set('emp-nombre',v('nombre'));set('emp-codigo',v('codigo'));set('emp-local',e?e.local:(RR.local!=='todos'?RR.local:RR_LOCALES[0]));
-  set('emp-cargo',v('cargo'));set('emp-ingreso',v('ingreso'));set('emp-reporta',v('reporta'));set('emp-cedula',v('cedula'));set('emp-telefono',v('telefono'));set('emp-lugar',v('lugar'));set('emp-correo',v('correo'));set('emp-emerg-nombre',v('emNombre'));set('emp-emerg-tel',v('emTel'));set('emp-emerg-par',v('emPar'));set('emp-estado',e?(e.estado||'activo'):'activo');
+  set('emp-cargo',v('cargo'));set('emp-vhora',v('valor_hora'));set('emp-ingreso',v('ingreso'));set('emp-reporta',v('reporta'));set('emp-cedula',v('cedula'));set('emp-telefono',v('telefono'));set('emp-lugar',v('lugar'));set('emp-correo',v('correo'));set('emp-emerg-nombre',v('emNombre'));set('emp-emerg-tel',v('emTel'));set('emp-emerg-par',v('emPar'));set('emp-estado',e?(e.estado||'activo'):'activo');
   document.getElementById('modal-emp').classList.add('open');
 }
 async function guardarEmp(){
@@ -1627,7 +1636,7 @@ async function guardarEmp(){
     const base={nombre,codigo,local,estado:g('emp-estado')||'activo'};
     const id=rrEdit||doc(collection(db,'mg_empleados')).id;
     await setDoc(doc(db,'mg_empleados',id),rrEdit?base:{...base,creado:serverTimestamp()},{merge:true});
-    await setDoc(doc(db,'rrhh_legajos',id),{cargo:g('emp-cargo'),ingreso:g('emp-ingreso'),reporta:g('emp-reporta'),cedula:g('emp-cedula'),telefono:g('emp-telefono'),lugar:g('emp-lugar'),correo:g('emp-correo'),emergencia_nombre:g('emp-emerg-nombre'),emergencia_telefono:g('emp-emerg-tel'),emergencia_parentesco:g('emp-emerg-par'),actualizado:serverTimestamp()},{merge:true});
+    await setDoc(doc(db,'rrhh_legajos',id),{cargo:g('emp-cargo'),valor_hora:g('emp-vhora')===''?'':Number(g('emp-vhora')),ingreso:g('emp-ingreso'),reporta:g('emp-reporta'),cedula:g('emp-cedula'),telefono:g('emp-telefono'),lugar:g('emp-lugar'),correo:g('emp-correo'),emergencia_nombre:g('emp-emerg-nombre'),emergencia_telefono:g('emp-emerg-tel'),emergencia_parentesco:g('emp-emerg-par'),actualizado:serverTimestamp()},{merge:true});
     RR.sel=id;cerrarModal('modal-emp');
   }catch(e){console.error(e);showToast('❌ No se pudo guardar. Revisa tu sesión y conexión.');}
   RR.guard=false;rrhhRender();
@@ -1719,7 +1728,192 @@ function renderTips(){
 }
 
 // ── CLOCK IN/OUT ──
+// ── ASISTENCIA → pestaña EQUIPO (como Time tracking de Square: Workday + Timecards). Lee clock_records (⏰ de Morochos OS) + mg_empleados + legajo ──
+const CK={tab:'marc',vista:'workday',dia:null,desde:null,hasta:null,local:'todos',emp:'todos',sel:null,modal:null};
+const ckYMD=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const ckHM=d=>d?d.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',hour12:false}):'—';
+const ckHrs=h=>{const m=Math.round(h*60);return Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m';};
+const ckDec=h=>h.toFixed(2);
+function ckIni(){const h=new Date();if(!CK.dia)CK.dia=ckYMD(h);if(!CK.hasta){CK.hasta=ckYMD(h);CK.desde=ckYMD(new Date(h.getFullYear(),h.getMonth(),1));}}
+function ckTurnos(){
+  const ahora=Date.now(),g={},out=[];
+  clockRecords.forEach(r=>{const k=(r.empId||r.nombre)+'|'+(r.local||'');(g[k]=g[k]||[]).push(r);});
+  const T=(e,s,dups,sinSalida)=>{
+    const ini=e?getD(e):null,fin=s?getD(s):null,b=e||s,h=ini&&fin?(fin-ini)/36e5:0;
+    let est='ok';
+    if(e&&!s)est=(!sinSalida&&(ahora-ini)/36e5<=16)?'curso':'sin_salida';
+    else if(!e)est='sin_entrada';
+    else if(h<=0||h>20)est='revisar';
+    return {key:(e?e.id:s.id),eId:e&&e.id,sId:s&&s.id,emp:b.empId||'',nombre:b.nombre,local:b.local||'',area:b.area||'',codigo:b.codigo||'',ini,fin,hrs:est==='ok'?h:0,parcial:est==='curso'?(ahora-ini)/36e5:0,est,manual:!!((e&&e.manual)||(s&&s.manual)),dia:ckYMD(ini||fin),dupIds:(dups||[]).map(x=>x.id),rep:1+(dups||[]).length};
+  };
+  Object.values(g).forEach(a=>{
+    a.sort((x,y)=>getD(x)-getD(y));let ab=null,dups=[],ult=null;const V=10*6e4;   // marcas repetidas (doble toque) a ≤10 min se juntan en un solo turno
+    a.forEach(r=>{
+      if(r.tipo==='entrada'){
+        if(ab){if(getD(r)-getD(ab)<=V){dups.push(r);return;}ult=T(ab,null,dups,true);out.push(ult);}
+        ab=r;dups=[];
+      }else{
+        if(ab){ult=T(ab,r,dups);out.push(ult);ab=null;dups=[];}
+        else if(ult&&((ult.fin&&Math.abs(getD(r)-ult.fin)<=V)||(!ult.ini&&ult.fin&&Math.abs(getD(r)-ult.fin)<=V))){ult.dupIds.push(r.id);ult.rep++;}
+        else{ult=T(null,r);out.push(ult);}
+      }
+    });
+    if(ab)out.push(T(ab,null,dups));
+  });
+  return out;
+}
+function ckCargo(t){const e=empleados.find(x=>x.id===t.emp);const l=(RR.leg&&RR.leg[t.emp])||{};return l.cargo||t.area||(e&&e.area)||'';}
+const ckEstTxt={curso:['En curso','badge-green'],sin_salida:['Sin salida','badge-red'],sin_entrada:['Sin entrada','badge-red'],revisar:['Revisar','badge-amber']};
+function ckEquipoRender(){
+  const w=document.getElementById('ck-equipo');if(!w)return;ckIni();
+  const locs=['todos',...RR_LOCALES];
+  let h='<div class="filter-bar" style="margin-bottom:12px;">';
+  h+='<select class="form-control" style="width:auto;" data-ck-sel="local">'+locs.map(l=>'<option value="'+esc(l)+'"'+(CK.local===l?' selected':'')+'>'+(l==='todos'?'Todos los locales':esc(l))+'</option>').join('')+'</select>';
+  if(RR.ok)h+='<span style="flex:1"></span><button class="btn btn-black btn-sm" data-ck="nuevo">+ Agregar turno</button>';
+  h+='</div>';
+  if(CK.vista==='timecards'&&CK.sel&&CK.sel.indexOf('|')>0)h='';   // en la ficha de una persona no se repite la barra de arriba
+  let T=ckTurnos().filter(t=>CK.local==='todos'||t.local===CK.local);
+  h+=CK.vista==='workday'?ckWorkday(T):ckTimecards(T);
+  w.innerHTML=h+ckModalHTML();
+}
+function ckWorkday(T){
+  const d=CK.dia,L=T.filter(t=>t.dia===d).sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre))||((a.ini||a.fin)-(b.ini||b.fin)));
+  const hoy=ckYMD(new Date());
+  const fecha=new Date(d+'T12:00:00').toLocaleDateString('es-EC',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  let h='<div class="filter-bar" style="margin-bottom:12px;"><button class="btn btn-outline btn-sm" data-ck="dia" data-v="-1">‹</button><input type="date" class="form-control" style="width:auto;" value="'+d+'" data-ck-sel="dia"><button class="btn btn-outline btn-sm" data-ck="dia" data-v="1">›</button><button class="btn btn-outline btn-sm" data-ck="hoy">Hoy</button><b style="font-size:14px;">'+esc(mayus(fecha))+'</b></div>';
+  if(!L.length)return h+'<div class="empty"><div class="icon">👥</div><p>Sin turnos registrados este día.</p></div>';
+  const fines=L.map(t=>t.fin||t.ini||new Date()),inis=L.map(t=>t.ini||t.fin);
+  const hMin=Math.max(0,Math.min(5,Math.floor(Math.min(...inis.map(x=>x.getHours()+x.getMinutes()/60))))),
+        hMax=Math.min(24,Math.max(18,Math.ceil(Math.max(...fines.map(x=>(x.getTime()-new Date(d+'T00:00:00').getTime())/36e5)))+1)),span=hMax-hMin;
+  const pos=x=>Math.max(0,Math.min(100,((x.getTime()-new Date(d+'T00:00:00').getTime())/36e5-hMin)/span*100));
+  const ahora=new Date();
+  const porEmp={};L.forEach(t=>{(porEmp[t.nombre+'|'+t.local]=porEmp[t.nombre+'|'+t.local]||[]).push(t);});
+  h+='<div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:#fff;"><div style="min-width:'+Math.max(760,span*70+190)+'px;">';
+  h+='<div style="display:flex;border-bottom:1px solid var(--border);"><div style="width:190px;flex:none;padding:10px 14px;font-weight:700;font-size:13px;">Equipo</div><div style="flex:1;position:relative;height:38px;">'+Array.from({length:span},(_,i)=>'<div style="position:absolute;left:'+(i/span*100)+'%;top:0;bottom:0;border-left:1px solid var(--gray-2);padding:10px 0 0 5px;font-size:11px;color:var(--gray-4);">'+String((hMin+i)%24).padStart(2,'0')+':00</div>').join('')+'</div></div>';
+  Object.values(porEmp).forEach(ts=>{
+    const t0=ts[0],tot=ts.reduce((a,t)=>a+t.hrs+t.parcial,0);
+    h+='<div style="display:flex;border-bottom:1px solid var(--gray-2);min-height:64px;"><div style="width:190px;flex:none;padding:10px 14px;"><div style="font-size:13px;font-weight:600;">'+esc(t0.nombre)+'</div><div style="font-size:12px;color:var(--gray-4);">'+esc(ckCargo(t0)||t0.local)+'</div><div style="font-size:12px;font-weight:700;margin-top:2px;">'+ckHrs(tot)+'</div></div><div style="flex:1;position:relative;">'+
+      Array.from({length:span},(_,i)=>'<div style="position:absolute;left:'+(i/span*100)+'%;top:0;bottom:0;border-left:1px solid var(--gray-2);"></div>').join('')+
+      ts.map(t=>{const a=t.ini||t.fin,b=t.fin||(t.est==='curso'?ahora:t.ini);let l=pos(a),r=pos(b);const bad=t.est!=='ok'&&t.est!=='curso';if(r-l<1.2)r=l+1.2;
+        return '<div data-ck="turno" data-id="'+esc(t.key)+'" title="'+esc(t.nombre)+'" style="position:absolute;top:10px;bottom:10px;left:'+l+'%;width:'+(r-l)+'%;min-width:70px;border-radius:8px;padding:5px 9px;cursor:pointer;overflow:hidden;font-size:12px;line-height:1.25;color:#fff;background:'+(bad?'#c0392b':t.est==='curso'?'#2e8b57':'#4cae8a')+';"><b>'+(t.ini?ckHM(t.ini):'?')+' – '+(t.fin?ckHM(t.fin):(t.est==='curso'?'en curso':'?'))+'</b><br>'+esc(ckCargo(t)||t.local)+(t.manual?' ✎':'')+'</div>';}).join('')+'</div></div>';
+  });
+  h+='</div></div><p style="font-size:12px;color:var(--gray-4);margin-top:8px;">Toca un turno para ver o corregir sus marcaciones. Rojo = falta una marcación o hay que revisarla. ✎ = turno agregado a mano.</p>';
+  if(CK.sel)h+=ckDetalleTurno(T.find(t=>t.key===CK.sel));
+  return h;
+}
+function ckDetalleTurno(t){
+  if(!t)return '';
+  const e=ckEstTxt[t.est];
+  return '<div class="card" style="margin-top:12px;"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;"><div><div style="font-size:18px;font-weight:800;">'+esc(t.nombre)+'</div><div style="font-size:13px;color:var(--gray-4);">'+esc(t.local)+' · '+esc(ckCargo(t)||'—')+' · '+evF(t.dia)+'</div></div><div>'+(e?'<span class="badge '+e[1]+'">'+e[0]+'</span>':'<span class="badge badge-green">Completo</span>')+(t.rep>1?' <span class="badge badge-amber">Marcada '+t.rep+' veces</span>':'')+'</div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:12px 0;"><div><div style="font-size:12px;color:var(--gray-4);">Entrada</div><b>'+(t.ini?ckHM(t.ini):'—')+'</b></div><div><div style="font-size:12px;color:var(--gray-4);">Salida</div><b>'+(t.fin?ckHM(t.fin):'—')+'</b></div><div><div style="font-size:12px;color:var(--gray-4);">Horas</div><b>'+(t.hrs?ckHrs(t.hrs):'—')+'</b></div></div>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline btn-sm" data-ck="cerrar">Cerrar</button>'+(RR.ok?'<button class="btn btn-black btn-sm" data-ck="editar" data-id="'+esc(t.key)+'">✎ Corregir</button><button class="btn btn-outline btn-sm" style="color:var(--red);" data-ck="borrar" data-id="'+esc(t.key)+'">Eliminar turno</button>':'')+'</div></div>';
+}
+function ckTimecards(T){
+  const P=T.filter(t=>t.dia>=CK.desde&&t.dia<=CK.hasta);
+  const por={};
+  P.forEach(t=>{const k=(t.emp||t.nombre)+'|'+t.local;const o=por[k]=por[k]||{t0:t,turnos:0,hrs:0,inc:0,todos:[]};o.turnos++;o.hrs+=t.hrs;o.todos.push(t);if(t.est!=='ok'&&t.est!=='curso')o.inc++;});
+  const R=Object.values(por).sort((a,b)=>String(a.t0.nombre).localeCompare(b.t0.nombre));
+  const tot=R.reduce((a,x)=>a+x.hrs,0),inc=R.reduce((a,x)=>a+x.inc,0);
+  if(CK.sel&&por[CK.sel])return ckPersona(por[CK.sel]);
+  let h='<div class="filter-bar" style="margin-bottom:12px;"><input type="date" class="form-control" style="width:auto;" value="'+CK.desde+'" data-ck-sel="desde"><span style="color:var(--gray-4);">—</span><input type="date" class="form-control" style="width:auto;" value="'+CK.hasta+'" data-ck-sel="hasta"><button class="btn btn-outline btn-sm" data-ck="mes">Este mes</button><button class="btn btn-outline btn-sm" data-ck="csv">⬇ CSV</button></div>';
+  h+='<div class="kpi-grid" style="margin-bottom:14px;"><div class="kpi"><div class="kpi-label">Horas regulares</div><div class="kpi-value">'+ckDec(tot)+'</div></div><div class="kpi"><div class="kpi-label">Horas extra</div><div class="kpi-value" style="color:var(--gray-4);">—</div><div class="kpi-sub">cálculo pendiente</div></div><div class="kpi"><div class="kpi-label">Horas pagadas</div><div class="kpi-value">'+ckDec(tot)+'</div></div><div class="kpi"><div class="kpi-label">Miembros con turnos</div><div class="kpi-value">'+R.length+'</div></div><div class="kpi"><div class="kpi-label">Turnos por corregir</div><div class="kpi-value" style="color:'+(inc?'var(--red)':'var(--green)')+';">'+inc+'</div></div></div>';
+  if(!R.length)return h+'<div class="empty"><div class="icon">🕘</div><p>Sin turnos en este período.</p></div>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Local</th><th>Cargo</th><th>Turnos</th><th>Horas regulares</th><th>Horas extra</th><th>Horas pagadas</th><th>Valor/hora</th><th>Alertas</th></tr></thead><tbody>'+R.map(x=>{
+    const t=x.t0,l=(RR.leg&&RR.leg[t.emp])||{};
+    return '<tr data-ck="persona" data-id="'+esc((t.emp||t.nombre)+'|'+t.local)+'" style="cursor:pointer;"><td><b>'+esc(t.nombre)+'</b></td><td>'+esc(t.local)+'</td><td>'+esc(ckCargo(t)||'—')+'</td><td>'+x.turnos+'</td><td><b>'+ckDec(x.hrs)+'</b> hrs</td><td style="color:var(--gray-4);">—</td><td><b>'+ckDec(x.hrs)+'</b> hrs</td><td>'+(l.valor_hora?'$'+Number(l.valor_hora).toFixed(2):'<span style="color:var(--gray-4);">—</span>')+'</td><td>'+(x.inc?'<span class="badge badge-red">'+x.inc+' por corregir</span>':'<span class="badge badge-green">OK</span>')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  return h;
+}
+const ckDiaTxt=d=>mayus(d.toLocaleDateString('es-EC',{weekday:'short',day:'numeric',month:'short'}).replace('.',''));
+function ckPersona(x){
+  const t0=x.t0,l=(RR.leg&&RR.leg[t0.emp])||{},vh=Number(l.valor_hora)||0,costo=vh?x.hrs*vh:null;
+  const fd=s=>new Date(s+'T12:00:00').toLocaleDateString('es-EC',{day:'numeric',month:'long',year:'numeric'});
+  let h='<div style="margin-bottom:14px;"><a href="#" data-ck="cerrar" style="font-size:20px;font-weight:800;color:var(--black);text-decoration:underline;">Todo el equipo</a> <span style="font-size:20px;font-weight:800;">›</span> <span style="font-size:20px;font-weight:800;">'+esc(t0.nombre)+': '+fd(CK.desde)+' – '+fd(CK.hasta)+'</span></div>';
+  h+='<div class="filter-bar" style="margin-bottom:16px;"><input type="date" class="form-control" style="width:auto;" value="'+CK.desde+'" data-ck-sel="desde"><span style="color:var(--gray-4);">—</span><input type="date" class="form-control" style="width:auto;" value="'+CK.hasta+'" data-ck-sel="hasta"><button class="btn btn-outline btn-sm" data-ck="mes">Este mes</button><span class="badge badge-gray">'+esc(t0.local)+'</span><span style="flex:1"></span><button class="btn btn-outline btn-sm" data-ck="csv" data-id="'+esc(CK.sel)+'">⬇ Exportar turnos</button>'+(RR.ok?'<button class="btn btn-black btn-sm" data-ck="nuevo" data-id="'+esc(t0.emp)+'">+ Agregar turno</button>':'')+'</div>';
+  const K=(v,lb,gris)=>'<div style="flex:1;min-width:120px;"><div style="font-size:30px;font-weight:800;line-height:1.1;'+(gris?'color:var(--gray-3);':'')+'">'+v+'</div><div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:'+(gris?'var(--gray-3)':'var(--gray-5)')+';margin-top:4px;text-transform:uppercase;">'+lb+'</div></div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:18px;margin-bottom:20px;">'+K(ckDec(x.hrs),'Horas regulares')+K('0.00','Horas extra',true)+K(ckDec(x.hrs),'Horas pagadas')+K(vh?'$'+vh.toFixed(2)+'/h':'—','Valor por hora',!vh)+K(costo!=null?'$'+costo.toFixed(2):'—','Costo laboral total',costo==null)+'</div>';
+  if(!vh)h+='<p style="font-size:12px;color:var(--gray-4);margin:-8px 0 14px;">Para ver el costo laboral, registra el valor por hora en Miembros del equipo.</p>';
+  h+='<div class="table-wrap"><table><thead><tr><th>Horas registradas</th><th style="text-align:right;">Horas pagadas</th><th style="text-align:right;">Costo laboral</th><th>Alertas</th><th></th></tr></thead><tbody>'+
+    x.todos.sort((a,b)=>(a.ini||a.fin)-(b.ini||b.fin)).map(t=>{const e=ckEstTxt[t.est],base=t.ini||t.fin;
+      return '<tr><td><b>'+esc(ckDiaTxt(base))+'</b>, '+(t.ini?ckHM(t.ini):'?')+' – '+(t.fin?ckHM(t.fin):(t.est==='curso'?'en curso':'?'))+(t.manual?' ✎':'')+'</td><td style="text-align:right;">'+ckDec(t.hrs)+' hrs</td><td style="text-align:right;">'+(vh&&t.hrs?'$'+(t.hrs*vh).toFixed(2):'<span style="color:var(--gray-4);">—</span>')+'</td><td>'+(e?'<span class="badge '+e[1]+'">'+e[0]+'</span> ':(t.rep>1?'':'<span style="color:var(--gray-4);">—</span>'))+(t.rep>1?'<span class="badge badge-amber">Marcada '+t.rep+' veces</span>':'')+'</td><td style="text-align:right;">'+(RR.ok?'<button class="btn btn-outline btn-sm" data-ck="editar" data-id="'+esc(t.key)+'">✎</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
+  return h;
+}
+function ckModalHTML(){
+  const m=CK.modal;if(!m)return '';
+  const emps=empleados.filter(e=>e.estado!=='inactivo'&&(CK.local==='todos'||e.local===CK.local));
+  const t=m.t;
+  return '<div class="modal-overlay open" id="ck-modal"><div class="modal" style="max-width:420px;"><div class="modal-header"><h3>'+(t?'Corregir turno':'Agregar turno')+'</h3><button class="modal-close" data-ck="mcerrar">✕</button></div><div class="modal-body">'+
+    (t?'<div style="font-weight:700;margin-bottom:8px;">'+esc(t.nombre)+' · '+esc(t.local)+'</div>':'<div class="form-group"><label class="form-label">Miembro del equipo</label><select id="ck-emp" class="form-control">'+emps.map(e=>'<option value="'+esc(e.id)+'"'+(m.emp===e.id?' selected':'')+'>'+esc(e.nombre)+' — '+esc(e.local)+'</option>').join('')+'</select></div>')+
+    '<div class="form-group"><label class="form-label">Fecha</label><input type="date" id="ck-fecha" class="form-control" value="'+(t?t.dia:CK.dia)+'"></div><div class="form-row"><div class="form-group"><label class="form-label">Entrada</label><input type="time" id="ck-ini" class="form-control" value="'+(t&&t.ini?ckHM(t.ini):'')+'"></div><div class="form-group"><label class="form-label">Salida</label><input type="time" id="ck-fin" class="form-control" value="'+(t&&t.fin?ckHM(t.fin):'')+'"></div></div>'+
+    '<div class="form-group"><label class="form-label">Motivo (opcional)</label><input id="ck-nota" class="form-control" placeholder="Ej: olvidó marcar la salida"></div></div><div class="modal-footer"><button class="btn btn-outline" data-ck="mcerrar">Cancelar</button><button class="btn btn-black" data-ck="mguardar">Guardar</button></div></div></div>';
+}
+async function ckGuardar(){
+  const m=CK.modal,v=i=>document.getElementById(i).value,f=v('ck-fecha'),a=v('ck-ini'),b=v('ck-fin'),nota=v('ck-nota').trim();
+  if(!f||(!a&&!b)){showToast('⚠️ Completa la fecha y al menos una hora');return;}
+  const dt=h=>new Date(f+'T'+h+':00');let ini=a?dt(a):null,fin=b?dt(b):null;
+  if(ini&&fin&&fin<=ini)fin=new Date(fin.getTime()+864e5);   // turno que pasa de medianoche
+  const quien=(ctx&&(ctx.email||ctx.nombre))||'';
+  try{
+    if(m.t){
+      const t=m.t;
+      if(t.eId){if(ini)await updateDoc(doc(db,'clock_records',t.eId),{fecha:ini,editado_por:quien,nota});else await deleteDoc(doc(db,'clock_records',t.eId));}
+      else if(ini)await addDoc(collection(db,'clock_records'),{empId:t.emp,nombre:t.nombre,local:t.local,area:t.area,codigo:t.codigo,tipo:'entrada',fecha:ini,manual:true,editado_por:quien,nota});
+      if(t.sId){if(fin)await updateDoc(doc(db,'clock_records',t.sId),{fecha:fin,editado_por:quien,nota});else await deleteDoc(doc(db,'clock_records',t.sId));}
+      else if(fin)await addDoc(collection(db,'clock_records'),{empId:t.emp,nombre:t.nombre,local:t.local,area:t.area,codigo:t.codigo,tipo:'salida',fecha:fin,manual:true,editado_por:quien,nota});
+    }else{
+      const e=empleados.find(x=>x.id===v('ck-emp'));if(!e){showToast('⚠️ Elige a la persona');return;}
+      const base={empId:e.id,nombre:e.nombre,local:e.local,area:e.area||'',codigo:e.codigo,manual:true,editado_por:quien,nota};
+      if(ini)await addDoc(collection(db,'clock_records'),{...base,tipo:'entrada',fecha:ini});
+      if(fin)await addDoc(collection(db,'clock_records'),{...base,tipo:'salida',fecha:fin});
+      CK.dia=f;
+    }
+    showToast('✅ Turno guardado');CK.modal=null;CK.sel=null;
+  }catch(e){console.error(e);showToast('❌ No se pudo guardar. Revisa tu sesión.');}
+  ckEquipoRender();
+}
+function ckCSV(pk){
+  const T=ckTurnos().filter(t=>(CK.local==='todos'||t.local===CK.local)&&t.dia>=CK.desde&&t.dia<=CK.hasta&&(!pk||((t.emp||t.nombre)+'|'+t.local)===pk)).sort((a,b)=>String(a.nombre).localeCompare(b.nombre)||(a.ini||a.fin)-(b.ini||b.fin));
+  const q=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+  const rows=[['Nombre','Local','Cargo','Fecha','Entrada','Salida','Horas','Estado'].map(q).join(',')].concat(T.map(t=>[t.nombre,t.local,ckCargo(t),t.dia,t.ini?ckHM(t.ini):'',t.fin?ckHM(t.fin):'',t.hrs?ckDec(t.hrs):'',(ckEstTxt[t.est]||['OK'])[0]].map(q).join(',')));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+rows.join('\n')],{type:'text/csv'}));a.download='timecards_'+CK.desde+'_'+CK.hasta+'.csv';a.click();
+}
+function ckNav(n){
+  CK.tab=n==='marc'?'marc':'equipo';if(n!=='marc')CK.vista=n;CK.sel=null;
+  goTo('clock');ckTab(CK.tab);
+  document.querySelectorAll('[data-ck-nav]').forEach(b=>b.classList.toggle('on',b.dataset.ckNav===n));
+  document.querySelectorAll('.rrhh-sb[data-s]').forEach(b=>b.classList.remove('on'));
+  document.getElementById('topbar-title').textContent='Asistencia · '+({marc:'Marcaciones',workday:'Jornada diaria',timecards:'Tarjetas de horas'})[n];
+}
+function ckTab(t){CK.tab=t;document.getElementById('ck-marc').style.display=t==='marc'?'block':'none';document.getElementById('ck-equipo').style.display=t==='equipo'?'block':'none';
+  document.querySelectorAll('[data-ck-tab]').forEach(b=>{b.classList.toggle('btn-black',b.dataset.ckTab===t);b.classList.toggle('btn-outline',b.dataset.ckTab!==t);});
+  if(t==='equipo')ckEquipoRender();}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-ck-nav]');if(b)ckNav(b.dataset.ckNav);});
+document.addEventListener('click',async e=>{
+  const el=e.target.closest&&e.target.closest('[data-ck],[data-ck-tab]');if(!el||!el.closest('#page-clock'))return;
+  if(el.tagName==='A')e.preventDefault();
+  const a=el.dataset.ck,v=el.dataset.v,id=el.dataset.id;ckIni();
+  const mover=n=>{const d=new Date(CK.dia+'T12:00:00');d.setDate(d.getDate()+n);CK.dia=ckYMD(d);};
+  if(a==='dia')mover(+v);
+  else if(a==='hoy')CK.dia=ckYMD(new Date());
+  else if(a==='mes'){const h=new Date();CK.desde=ckYMD(new Date(h.getFullYear(),h.getMonth(),1));CK.hasta=ckYMD(h);}
+  else if(a==='turno'||a==='persona')CK.sel=id;
+  else if(a==='cerrar')CK.sel=null;
+  else if(a==='nuevo')CK.modal={t:null,emp:id||''};
+  else if(a==='editar'){const t=ckTurnos().find(x=>x.key===id);if(t)CK.modal={t};}
+  else if(a==='mcerrar')CK.modal=null;
+  else if(a==='mguardar'){await ckGuardar();return;}
+  else if(a==='borrar'){const t=ckTurnos().find(x=>x.key===id);if(!t||!confirm('¿Eliminar este turno de '+t.nombre+' ('+evF(t.dia)+')? Se borran sus marcaciones.'))return;
+    try{if(t.eId)await deleteDoc(doc(db,'clock_records',t.eId));if(t.sId)await deleteDoc(doc(db,'clock_records',t.sId));for(const d of (t.dupIds||[]))await deleteDoc(doc(db,'clock_records',d));showToast('Turno eliminado');CK.sel=null;}catch(er){console.error(er);showToast('❌ No se pudo eliminar. Revisa tu sesión.');}}
+  else if(a==='csv'){ckCSV(id);return;}
+  ckEquipoRender();
+});
+document.addEventListener('change',e=>{
+  const s=e.target.dataset&&e.target.dataset.ckSel;if(!s||!e.target.closest('#page-clock'))return;ckIni();
+  if(s==='local')CK.local=e.target.value;else if(s==='dia'&&e.target.value)CK.dia=e.target.value;else if(s==='desde'&&e.target.value)CK.desde=e.target.value;else if(s==='hasta'&&e.target.value)CK.hasta=e.target.value;
+  CK.sel=null;ckEquipoRender();
+});
+
 function renderClock(){
+  if(CK.tab==='equipo')ckEquipoRender();
   const p=document.getElementById('fc-periodo').value;
   document.getElementById('fc-rango').style.display=p==='rango'?'flex':'none';
   let data=[...clockRecords];

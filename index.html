@@ -91,6 +91,7 @@
   #fb-local,#fp-local,#ft-local,#fc-local,#fpe-local{display:none;}
 
   .content{padding:24px;max-width:1100px;}
+  .content:has(#page-clock.active){max-width:none;}
 
   .page{display:none;}
   .page.active{display:block;}
@@ -258,14 +259,14 @@
         <span class="ni">👥</span><span class="nl">Recursos Humanos</span>
       </button>
       <div class="rrhh-sub" id="rrhh-sub" style="display:none;">
-        <button class="rrhh-sb" data-s="legajo" onclick="rrhhIr('legajo')"><span>1. Miembros equipo</span><small>En construcción</small></button>
+        <button class="rrhh-sb" data-s="legajo" onclick="rrhhIr('legajo')"><span>1. Equipo</span><small>En construcción</small></button>
         <button class="rrhh-sb" data-s="reclutamiento" onclick="rrhhIr('reclutamiento')"><span>2. Reclutamiento</span><small>Vista previa</small></button>
         <button class="rrhh-sb" data-s="asistencia" onclick="rrhhIr('asistencia')"><span>3. Asistencia</span><small>Conectado</small></button>
         <button class="rrhh-sb rrhh-ss" data-ck-nav="marc"><span>Marcaciones</span></button>
         <button class="rrhh-sb rrhh-ss" data-ck-nav="workday"><span>Jornada diaria</span></button>
-        <button class="rrhh-sb rrhh-ss" data-ck-nav="timecards"><span>Tarjetas de horas</span></button>
-        <button class="rrhh-sb" data-s="vacaciones" onclick="rrhhIr('vacaciones')"><span>4. Vacaciones</span><small>Pendiente</small></button>
-        <button class="rrhh-sb" data-s="nomina" onclick="rrhhIr('nomina')"><span>5. Nómina</span><small>Pendiente</small></button>
+        <button class="rrhh-sb rrhh-ss" data-ck-nav="timecards"><span>Horas trabajadas</span></button>
+        <button class="rrhh-sb" data-s="nomina" onclick="rrhhIr('nomina')"><span>4. Nómina</span><small>Pendiente</small></button>
+        <button class="rrhh-sb" data-s="vacaciones" onclick="rrhhIr('vacaciones')"><span>5. Vacaciones</span><small>Pendiente</small></button>
         <button class="rrhh-sb" data-s="cumplimiento" onclick="rrhhIr('cumplimiento')"><span>6. Cumplimiento</span><small>Pendiente</small></button>
         <button class="rrhh-sb" data-s="evaluaciones" onclick="rrhhIr('evaluaciones')"><span>7. Evaluaciones</span><small>Conectado</small></button>
       </div></div>
@@ -836,6 +837,13 @@ function goTo(id){
     rrhh:'Recursos Humanos',tips:'Tips',clock:'Asistencia',mantenimiento:'Mantenimiento',
     pedidos:'Pedidos a Facility',checklists:'Checklists',hoy:'Revisión del día'};
   document.getElementById('topbar-title').textContent=titles[id]||id;
+  // En Recursos Humanos y Asistencia los filtros de local/estación de arriba no se usan (cada vista trae los suyos)
+  const sb=document.querySelector('.scope-bar'),sinScope=(id==='clock'||id==='rrhh');
+  if(sb)sb.style.display=sinScope?'none':'';
+  if(sinScope&&ctx&&ctx.rol==='oficina'&&(scopeLocal!=='todos'||scopeEst!=='todas')){
+    document.getElementById('sc-local').value='todos';document.getElementById('sc-est').value='todas';scopeLocal='todos';scopeEst='todas';
+    bajas=scoped('bajas');producciones=scoped('producciones');tips=scoped('tips');clockRecords=scoped('clockRecords');pedidos=scoped('pedidos');checklists=scoped('checklists');
+  }
   if(id==='dashboard') renderDashboard();
   if(id==='bajas') renderBajas();
   if(id==='produccion') renderProduccion();
@@ -1367,11 +1375,11 @@ document.getElementById('modal-rec').addEventListener('click',e=>{if(e.target.id
 // ── RECURSOS HUMANOS ──  1 Miembros equipo (real) · 2 Reclutamiento (vista previa) · 3 Asistencia · 4-6 pendientes
 // Los datos sensibles (legajos y documentos) solo se leen/escriben con sesión (reglas: rrhh_legajos, rrhh_docs). Marcaciones siguen usando mg_empleados (código + local).
 const RR_MODS=[
-  {id:'legajo',n:1,label:'Miembros del equipo',short:'Miembros',status:'En construcción'},
+  {id:'legajo',n:1,label:'Equipo',short:'Equipo',status:'En construcción'},
   {id:'reclutamiento',n:2,label:'Reclutamiento y contratación',short:'Reclutamiento',status:'Vista previa'},
   {id:'asistencia',n:3,label:'Asistencia y marcaciones',short:'Asistencia',status:'Conectado'},
-  {id:'vacaciones',n:4,label:'Vacaciones y permisos',short:'Vacaciones',status:'Pendiente'},
-  {id:'nomina',n:5,label:'Nómina y rol de pagos',short:'Nómina',status:'Pendiente'},
+  {id:'nomina',n:4,label:'Nómina y rol de pagos',short:'Nómina',status:'Pendiente'},
+  {id:'vacaciones',n:5,label:'Vacaciones y permisos',short:'Vacaciones',status:'Pendiente'},
   {id:'cumplimiento',n:6,label:'Cumplimiento y desempeño',short:'Cumplimiento',status:'Pendiente'},
   {id:'evaluaciones',n:7,label:'Evaluaciones de visita',short:'Evaluaciones',status:'Conectado'}];
 const RR_DOCS=[['cedula','Cédula de identidad'],['contrato','Contrato'],['iess','Afiliación IESS'],['salud','Certificado de salud'],['foto','Foto del empleado']];
@@ -1560,8 +1568,7 @@ function rrhhRender(){
   let h='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;"><div><div style="font-size:12px;font-weight:600;color:var(--gray-4);">Recursos Humanos</div>'+
     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:22px;font-weight:800;">'+cur.n+'. '+esc(cur.label)+'</span><span class="badge '+rrChip(cur.status)+'">'+cur.status+'</span></div></div>'+
     '<div style="font-size:12px;color:var(--gray-4);text-align:right;">'+esc(RR.user.nombre)+'</div></div>';
-  h+='<p style="font-size:12px;color:var(--gray-4);margin-bottom:8px;">Se trabaja un módulo a la vez, en este orden. Esta semana: módulo 1.</p><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px;margin-bottom:18px;">'+
-    RR_MODS.map(m=>'<div style="padding:8px 10px;border-radius:8px;font-size:12px;'+(m.id===RR.sec?'background:var(--black);color:white;':'background:var(--gray-1);color:var(--gray-5);')+'"><b>'+m.n+'</b> '+m.short+'</div>').join('')+'</div>';
+  h+='<div style="margin-bottom:6px;"></div>';
   if(RR.err)h+='<div class="card" style="color:var(--red);font-size:13px;">'+esc(RR.err)+'</div>';
   h+=RR.sec==='legajo'?rrLegajo():RR.sec==='reclutamiento'?rrReclut():RR.sec==='evaluaciones'?evRender():'<div class="card"><div class="card-title">'+cur.n+'. '+esc(cur.label)+'</div><p style="font-size:13px;color:var(--gray-5);margin-bottom:10px;">Este módulo todavía no se trabaja. Cuando termine el módulo anterior pasa a "En construcción".</p><b style="font-size:13px;">Qué va a incluir</b><ul style="margin:8px 0 0 18px;font-size:13px;display:flex;flex-direction:column;gap:4px;">'+(RR_INFO[cur.id]||[]).map(t=>'<li>'+t+'</li>').join('')+'</ul></div>';
   root.innerHTML=h;
@@ -1731,7 +1738,9 @@ function renderTips(){
 // ── ASISTENCIA → pestaña EQUIPO (como Time tracking de Square: Workday + Timecards). Lee clock_records (⏰ de Morochos OS) + mg_empleados + legajo ──
 const CK={tab:'marc',vista:'workday',dia:null,desde:null,hasta:null,local:'todos',emp:'todos',sel:null,modal:null};
 const ckYMD=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-const ckHM=d=>d?d.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit',hour12:false}):'—';
+const ckHM=d=>{if(!d)return '—';let h=d.getHours();const m=String(d.getMinutes()).padStart(2,'0'),ap=h>=12?'pm':'am';h=h%12||12;return h+':'+m+' '+ap;};   // 12 horas: 7:05 am
+const ckH24=d=>d?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'';   // solo para los campos de hora
+const ckEje=n=>{n=n%24;return (n%12||12)+' '+(n>=12?'PM':'AM');};
 const ckHrs=h=>{const m=Math.round(h*60);return Math.floor(m/60)+'h '+String(m%60).padStart(2,'0')+'m';};
 const ckDec=h=>h.toFixed(2);
 function ckIni(){const h=new Date();if(!CK.dia)CK.dia=ckYMD(h);if(!CK.hasta){CK.hasta=ckYMD(h);CK.desde=ckYMD(new Date(h.getFullYear(),h.getMonth(),1));}}
@@ -1789,7 +1798,7 @@ function ckWorkday(T){
   const ahora=new Date();
   const porEmp={};L.forEach(t=>{(porEmp[t.nombre+'|'+t.local]=porEmp[t.nombre+'|'+t.local]||[]).push(t);});
   h+='<div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:#fff;"><div style="min-width:'+Math.max(760,span*70+190)+'px;">';
-  h+='<div style="display:flex;border-bottom:1px solid var(--border);"><div style="width:190px;flex:none;padding:10px 14px;font-weight:700;font-size:13px;">Equipo</div><div style="flex:1;position:relative;height:38px;">'+Array.from({length:span},(_,i)=>'<div style="position:absolute;left:'+(i/span*100)+'%;top:0;bottom:0;border-left:1px solid var(--gray-2);padding:10px 0 0 5px;font-size:11px;color:var(--gray-4);">'+String((hMin+i)%24).padStart(2,'0')+':00</div>').join('')+'</div></div>';
+  h+='<div style="display:flex;border-bottom:1px solid var(--border);"><div style="width:190px;flex:none;padding:10px 14px;font-weight:700;font-size:13px;">Equipo</div><div style="flex:1;position:relative;height:38px;">'+Array.from({length:span},(_,i)=>'<div style="position:absolute;left:'+(i/span*100)+'%;top:0;bottom:0;border-left:1px solid var(--gray-2);padding:10px 0 0 5px;font-size:11px;color:var(--gray-4);">'+ckEje(hMin+i)+'</div>').join('')+'</div></div>';
   Object.values(porEmp).forEach(ts=>{
     const t0=ts[0],tot=ts.reduce((a,t)=>a+t.hrs+t.parcial,0);
     h+='<div style="display:flex;border-bottom:1px solid var(--gray-2);min-height:64px;"><div style="width:190px;flex:none;padding:10px 14px;"><div style="font-size:13px;font-weight:600;">'+esc(t0.nombre)+'</div><div style="font-size:12px;color:var(--gray-4);">'+esc(ckCargo(t0)||t0.local)+'</div><div style="font-size:12px;font-weight:700;margin-top:2px;">'+ckHrs(tot)+'</div></div><div style="flex:1;position:relative;">'+
@@ -1831,7 +1840,7 @@ function ckPersona(x){
   h+='<div class="filter-bar" style="margin-bottom:16px;"><input type="date" class="form-control" style="width:auto;" value="'+CK.desde+'" data-ck-sel="desde"><span style="color:var(--gray-4);">—</span><input type="date" class="form-control" style="width:auto;" value="'+CK.hasta+'" data-ck-sel="hasta"><button class="btn btn-outline btn-sm" data-ck="mes">Este mes</button><span class="badge badge-gray">'+esc(t0.local)+'</span><span style="flex:1"></span><button class="btn btn-outline btn-sm" data-ck="csv" data-id="'+esc(CK.sel)+'">⬇ Exportar turnos</button>'+(RR.ok?'<button class="btn btn-black btn-sm" data-ck="nuevo" data-id="'+esc(t0.emp)+'">+ Agregar turno</button>':'')+'</div>';
   const K=(v,lb,gris)=>'<div style="flex:1;min-width:120px;"><div style="font-size:30px;font-weight:800;line-height:1.1;'+(gris?'color:var(--gray-3);':'')+'">'+v+'</div><div style="font-size:12px;font-weight:700;letter-spacing:.04em;color:'+(gris?'var(--gray-3)':'var(--gray-5)')+';margin-top:4px;text-transform:uppercase;">'+lb+'</div></div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:18px;margin-bottom:20px;">'+K(ckDec(x.hrs),'Horas regulares')+K('0.00','Horas extra',true)+K(ckDec(x.hrs),'Horas pagadas')+K(vh?'$'+vh.toFixed(2)+'/h':'—','Valor por hora',!vh)+K(costo!=null?'$'+costo.toFixed(2):'—','Costo laboral total',costo==null)+'</div>';
-  if(!vh)h+='<p style="font-size:12px;color:var(--gray-4);margin:-8px 0 14px;">Para ver el costo laboral, registra el valor por hora en Miembros del equipo.</p>';
+  if(!vh)h+='<p style="font-size:12px;color:var(--gray-4);margin:-8px 0 14px;">Para ver el costo laboral, registra el valor por hora en Equipo.</p>';
   h+='<div class="table-wrap"><table><thead><tr><th>Horas registradas</th><th style="text-align:right;">Horas pagadas</th><th style="text-align:right;">Costo laboral</th><th>Alertas</th><th></th></tr></thead><tbody>'+
     x.todos.sort((a,b)=>(a.ini||a.fin)-(b.ini||b.fin)).map(t=>{const e=ckEstTxt[t.est],base=t.ini||t.fin;
       return '<tr><td><b>'+esc(ckDiaTxt(base))+'</b>, '+(t.ini?ckHM(t.ini):'?')+' – '+(t.fin?ckHM(t.fin):(t.est==='curso'?'en curso':'?'))+(t.manual?' ✎':'')+'</td><td style="text-align:right;">'+ckDec(t.hrs)+' hrs</td><td style="text-align:right;">'+(vh&&t.hrs?'$'+(t.hrs*vh).toFixed(2):'<span style="color:var(--gray-4);">—</span>')+'</td><td>'+(e?'<span class="badge '+e[1]+'">'+e[0]+'</span> ':(t.rep>1?'':'<span style="color:var(--gray-4);">—</span>'))+(t.rep>1?'<span class="badge badge-amber">Marcada '+t.rep+' veces</span>':'')+'</td><td style="text-align:right;">'+(RR.ok?'<button class="btn btn-outline btn-sm" data-ck="editar" data-id="'+esc(t.key)+'">✎</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div>';
@@ -1843,7 +1852,7 @@ function ckModalHTML(){
   const t=m.t;
   return '<div class="modal-overlay open" id="ck-modal"><div class="modal" style="max-width:420px;"><div class="modal-header"><h3>'+(t?'Corregir turno':'Agregar turno')+'</h3><button class="modal-close" data-ck="mcerrar">✕</button></div><div class="modal-body">'+
     (t?'<div style="font-weight:700;margin-bottom:8px;">'+esc(t.nombre)+' · '+esc(t.local)+'</div>':'<div class="form-group"><label class="form-label">Miembro del equipo</label><select id="ck-emp" class="form-control">'+emps.map(e=>'<option value="'+esc(e.id)+'"'+(m.emp===e.id?' selected':'')+'>'+esc(e.nombre)+' — '+esc(e.local)+'</option>').join('')+'</select></div>')+
-    '<div class="form-group"><label class="form-label">Fecha</label><input type="date" id="ck-fecha" class="form-control" value="'+(t?t.dia:CK.dia)+'"></div><div class="form-row"><div class="form-group"><label class="form-label">Entrada</label><input type="time" id="ck-ini" class="form-control" value="'+(t&&t.ini?ckHM(t.ini):'')+'"></div><div class="form-group"><label class="form-label">Salida</label><input type="time" id="ck-fin" class="form-control" value="'+(t&&t.fin?ckHM(t.fin):'')+'"></div></div>'+
+    '<div class="form-group"><label class="form-label">Fecha</label><input type="date" id="ck-fecha" class="form-control" value="'+(t?t.dia:CK.dia)+'"></div><div class="form-row"><div class="form-group"><label class="form-label">Entrada</label><input type="time" id="ck-ini" class="form-control" value="'+(t&&t.ini?ckH24(t.ini):'')+'"></div><div class="form-group"><label class="form-label">Salida</label><input type="time" id="ck-fin" class="form-control" value="'+(t&&t.fin?ckH24(t.fin):'')+'"></div></div>'+
     '<div class="form-group"><label class="form-label">Motivo (opcional)</label><input id="ck-nota" class="form-control" placeholder="Ej: olvidó marcar la salida"></div></div><div class="modal-footer"><button class="btn btn-outline" data-ck="mcerrar">Cancelar</button><button class="btn btn-black" data-ck="mguardar">Guardar</button></div></div></div>';
 }
 async function ckGuardar(){
@@ -1881,7 +1890,7 @@ function ckNav(n){
   goTo('clock');ckTab(CK.tab);
   document.querySelectorAll('[data-ck-nav]').forEach(b=>b.classList.toggle('on',b.dataset.ckNav===n));
   document.querySelectorAll('.rrhh-sb[data-s]').forEach(b=>b.classList.remove('on'));
-  document.getElementById('topbar-title').textContent='Asistencia · '+({marc:'Marcaciones',workday:'Jornada diaria',timecards:'Tarjetas de horas'})[n];
+  document.getElementById('topbar-title').textContent='Asistencia · '+({marc:'Marcaciones',workday:'Jornada diaria',timecards:'Horas trabajadas'})[n];
 }
 function ckTab(t){CK.tab=t;document.getElementById('ck-marc').style.display=t==='marc'?'block':'none';document.getElementById('ck-equipo').style.display=t==='equipo'?'block':'none';
   document.querySelectorAll('[data-ck-tab]').forEach(b=>{b.classList.toggle('btn-black',b.dataset.ckTab===t);b.classList.toggle('btn-outline',b.dataset.ckTab!==t);});

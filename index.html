@@ -178,6 +178,10 @@
     z-index:999;transition:opacity .3s;opacity:0;pointer-events:none;}
   .toast.show{opacity:1;}
 
+  .cp-row{display:grid;grid-template-columns:2fr 1.2fr 1fr 2fr;gap:12px;align-items:center;width:100%;text-align:left;cursor:pointer;margin:0 0 8px;padding:14px 16px;font-family:inherit;}
+  .cp-row:hover{border-color:var(--gray-4);}
+  .cp-d{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+  @media(max-width:768px){.cp-row{grid-template-columns:1fr 1fr;}.cp-d{justify-content:flex-start;grid-column:1/-1;}}
   .empty{text-align:center;padding:40px 20px;color:var(--gray-4);}
   .empty .icon{font-size:32px;margin-bottom:8px;}
   .empty p{font-size:13px;}
@@ -275,6 +279,9 @@
       </button>
       <button class="nav-item" id="nav-mantenimiento" onclick="goTo('mantenimiento')">
         <span class="ni">🔧</span><span class="nl">Mantenimiento</span>
+      </button>
+      <button class="nav-item" id="nav-compras" onclick="goTo('compras')">
+        <span class="ni">🧾</span><span class="nl">Compras</span><span class="nl" id="nav-compras-n" style="display:none;margin-left:auto;background:var(--amber);color:white;border-radius:10px;font-size:10px;font-weight:700;padding:1px 7px;"></span>
       </button>
       <button class="nav-item" id="nav-clock" onclick="goTo('clock')">
         <span class="ni">⏰</span><span class="nl">Asistencia</span>
@@ -462,6 +469,10 @@
       <!-- ═══ RECURSOS HUMANOS ═══ -->
       <div class="page" id="page-mantenimiento">
         <div id="mt-root"></div>
+      </div>
+
+      <div class="page" id="page-compras">
+        <div id="cp-root"></div>
       </div>
 
       <div class="page" id="page-rrhh">
@@ -740,7 +751,7 @@ function cambiarScope(){
 // Módulos de Manager EC. Cada usuario (manager_usuarios/{correo}) tiene un rol y, si se quiere, una lista propia "modulos".
 //   oficina  → todo · encargado → todo menos Recursos Humanos, solo su local · rrhh → Recursos Humanos + Asistencia
 //   cualquier otro rol (p. ej. "equipo") → solo los módulos de su lista "modulos"
-const MODULOS=['dashboard','bajas','produccion','recepcion','checklists','rrhh','tips','clock','hoy','pedidos','mantenimiento'];
+const MODULOS=['dashboard','bajas','produccion','recepcion','checklists','rrhh','tips','clock','hoy','pedidos','mantenimiento','compras'];
 async function cargarRol(email){
   const snap=await getDoc(doc(db,'manager_usuarios',email.toLowerCase()));
   if(!snap.exists()){ MOTIVO='No hay un documento con el ID «'+email.toLowerCase()+'» en manager_usuarios (revisa que el ID sea idéntico al correo, en minúsculas).'; return null; }
@@ -753,7 +764,7 @@ async function cargarRol(email){
   const leido=' Leí: rol=«'+(d.rol||'(vacío)')+'», modulos='+(mods?'«'+mods.join(', ')+'»':'(no existe o no es lista)')+(d.local?', local=«'+d.local+'»':'')+'.';
   const rrhhOk=d.rol==='oficina'||d.rol==='rrhh';
   if(d.rol==='oficina') return {...base,rol:'oficina',modulos:MODULOS};   // oficina ve todos los módulos (incluidos los nuevos) sin depender de «modulos»
-  if(d.rol==='encargado' && LOCALES_MGR.includes(d.local)) return {...base,rol:'encargado',local:d.local,modulos:(lista&&lista.length?lista:MODULOS).filter(m=>m!=='rrhh')};
+  if(d.rol==='encargado' && LOCALES_MGR.includes(d.local)) return {...base,rol:'encargado',local:d.local,modulos:(lista&&lista.length?lista:MODULOS).filter(m=>m!=='rrhh'&&m!=='compras')};
   if(d.rol==='rrhh') return {...base,rol:'oficina',etiqueta:'Recursos Humanos',modulos:lista&&lista.length?lista:['rrhh','clock']};
   if(lista&&lista.length) return {...base,rol:'oficina',etiqueta:'Equipo',modulos:lista.filter(m=>m!=='rrhh'||rrhhOk)};
   MOTIVO='El documento existe pero le falta información: «rol» debe ser oficina, encargado, rrhh o equipo (escrito en minúsculas), y con «equipo» el campo «modulos» debe traer al menos un módulo válido (bajas, recepcion, produccion, checklists, tips, clock, dashboard…). Encargado necesita «local» = La Victoria o El Salado.'+leido;
@@ -798,7 +809,7 @@ function abrirApp(){
     const f=document.getElementById('scope-fixed'); f.textContent=ctx.local; f.style.display='inline-block';
   }
   // solo se muestran los módulos permitidos (y los títulos de sección que se quedan con algo)
-  const MAPA={dashboard:'nav-dashboard',bajas:'nav-bajas',produccion:'nav-produccion',recepcion:'nav-recepcion',checklists:'nav-checklists',rrhh:'nav-rrhh-group',tips:'nav-tips',clock:'nav-clock',hoy:'nav-hoy',mantenimiento:'nav-mantenimiento'};
+  const MAPA={dashboard:'nav-dashboard',bajas:'nav-bajas',produccion:'nav-produccion',recepcion:'nav-recepcion',checklists:'nav-checklists',rrhh:'nav-rrhh-group',tips:'nav-tips',clock:'nav-clock',hoy:'nav-hoy',mantenimiento:'nav-mantenimiento',compras:'nav-compras'};
   Object.entries(MAPA).forEach(([m,id])=>{const el=document.getElementById(id);if(el)el.style.display=permitido(m)?'':'none';});
   let tit=null,hay=false;
   [...document.querySelector('.sidebar-nav').children].forEach(el=>{
@@ -810,6 +821,7 @@ function abrirApp(){
   {const nc=document.getElementById('nav-clock');if(nc)nc.style.display=permitido('rrhh')?'none':'';}
   RR.ok=permitido('rrhh')&&(ctx.perfil==='oficina'||ctx.perfil==='rrhh'); RR.user=ctx;
   if(RR.ok) rrhhEscuchar();
+  if(permitido('compras')) cpEscuchar();
   iniciarApp();
   goTo(['dashboard','bajas','produccion','recepcion','checklists','rrhh','tips','mantenimiento','clock'].find(permitido)||'dashboard');
 }
@@ -834,11 +846,11 @@ function goTo(id){
   document.getElementById('page-'+id).classList.add('active');
   document.getElementById('nav-'+id).classList.add('active');
   const titles={dashboard:'Dashboard',bajas:'Bajas',produccion:'Producción',recepcion:'Recepción',
-    rrhh:'Recursos Humanos',tips:'Tips',clock:'Asistencia',mantenimiento:'Mantenimiento',
+    rrhh:'Recursos Humanos',tips:'Tips',clock:'Asistencia',mantenimiento:'Mantenimiento',compras:'Compras (Facility)',
     pedidos:'Pedidos a Facility',checklists:'Checklists',hoy:'Revisión del día'};
   document.getElementById('topbar-title').textContent=titles[id]||id;
   // En Recursos Humanos y Asistencia los filtros de local/estación de arriba no se usan (cada vista trae los suyos)
-  const sb=document.querySelector('.scope-bar'),sinScope=(id==='clock'||id==='rrhh');
+  const sb=document.querySelector('.scope-bar'),sinScope=(id==='clock'||id==='rrhh'||id==='compras');
   if(sb)sb.style.display=sinScope?'none':'';
   if(sinScope&&ctx&&ctx.rol==='oficina'&&(scopeLocal!=='todos'||scopeEst!=='todas')){
     document.getElementById('sc-local').value='todos';document.getElementById('sc-est').value='todas';scopeLocal='todos';scopeEst='todas';
@@ -853,6 +865,7 @@ function goTo(id){
   if(id==='clock'){document.getElementById('nav-rrhh').classList.add('active');RR.sec='asistencia';document.querySelectorAll('.rrhh-sb').forEach(b=>b.classList.toggle('on',b.dataset.s==='asistencia'));}
   if(id==='tips') renderTips();
   if(id==='mantenimiento'){mtEscuchar();mtRender();}
+  if(id==='compras'){cpEscuchar();cpRender();}
   if(id==='clock') renderClock();
   if(id==='pedidos') renderPedidos();
   if(id==='checklists') renderChecklists();
@@ -870,6 +883,128 @@ const mtHoy=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOS
 const mtFecha=f=>f?rrMes(f):'—';
 const mtSumDias=(f,n)=>{const d=new Date(f+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
 const mtDigits=t=>{let d=String(t||'').replace(/\D/g,'');if(d.startsWith('0'))d='593'+d.slice(1);return d;};
+/* ═════════ COMPRAS (Facility) · lee manager_contabilidad ═════════
+   Facility EC crea un documento por compra al tocar «Enviar a contabilidad». Aquí solo se LEE;
+   lo propio de Manager va en campos mgr_* (mgr_estado, mgr_nota, mgr_revisado_por, mgr_fecha). */
+const CP={docs:[],unsub:null,err:'',sel:null,local:'todos',est:'todos',rango:'todos',q:''};
+const CP_LOC={la_victoria:'La Victoria',el_salado:'El Salado',facility_feria_libre:'Facility Feria Libre',cocina_produccion:'Cocina Producción',cuarto_frio:'Cuarto frío',facility:'Facility',bodega:'Bodega',varios:'Varios locales'};
+const CP_EST={por_revisar:['Por revisar','badge-amber'],revisada:['Revisada','badge-blue'],pagada:['Pagada','badge-green'],observada:['Observada','badge-red']};
+const cpLoc=l=>CP_LOC[l]||l||'—';
+const cpMs=f=>f&&f.toDate?f.toDate().getTime():(typeof f==='number'?f:(f?(Date.parse(f)||0):0));
+const cpEstado=d=>CP_EST[d.mgr_estado]?d.mgr_estado:'por_revisar';
+const cpNum=v=>(v===null||v===undefined||v===''||isNaN(+v))?null:+v;
+const cpM=v=>{const n=cpNum(v);return n==null?'—':(n<0?'-$':'$')+Math.abs(n).toFixed(2);};
+const cpFecha=ms=>ms?new Date(ms).toLocaleString('es-EC',{day:'2-digit',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true}):'—';
+const cpSinComp=d=>!String(d.comprobante||'').trim();
+const cpSinCosto=d=>(d.items||[]).filter(i=>i.costo===null||i.costo===undefined).length;
+const cpSaldoNeg=d=>cpNum(d.saldo)!=null&&cpNum(d.saldo)<0;
+const cpPedido=d=>d.requerimiento===true?'Requerimiento':(d.pedido_numero?'Pedido #'+d.pedido_numero:'—');
+function cpAlertas(d){const a=[];if(cpSinComp(d))a.push('Falta comprobante');const n=cpSinCosto(d);if(n)a.push(n+' producto'+(n===1?'':'s')+' sin costo');if(cpSaldoNeg(d))a.push('Saldo negativo');return a;}
+function cpEscuchar(){
+  if(CP.unsub)return;
+  CP.unsub=onSnapshot(collection(db,'manager_contabilidad'),s=>{
+    CP.docs=s.docs.map(d=>({id:d.id,...d.data()}));CP.err='';cpNav();
+    if(document.getElementById('page-compras').classList.contains('active'))cpRender();
+  },e=>{console.error('manager_contabilidad',e);CP.err='No se pudo leer Compras (¿reglas de Firebase sin publicar?).';
+    if(document.getElementById('page-compras').classList.contains('active'))cpRender();});
+}
+function cpNav(){const n=CP.docs.filter(d=>cpEstado(d)==='por_revisar').length,el=document.getElementById('nav-compras-n');if(el){el.textContent=n||'';el.style.display=n?'inline-block':'none';}}
+function cpRango(){const now=new Date(),h=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  const dow=(now.getDay()+6)%7;return {hoy:h,semana:h-dow*864e5,mes:new Date(now.getFullYear(),now.getMonth(),1).getTime()};}
+function cpFiltrados(){
+  const r=cpRango(),q=CP.q.trim().toLowerCase();
+  return CP.docs.filter(d=>{
+    if(CP.local!=='todos'&&d.local!==CP.local)return false;
+    if(CP.est!=='todos'&&cpEstado(d)!==CP.est)return false;
+    if(CP.rango!=='todos'&&cpMs(d.fecha_envio)<r[CP.rango])return false;
+    if(q){const t=[d.comprobante,d.pedido_numero,cpLoc(d.local),...(d.items||[]).flatMap(i=>[i.vendedor,i.producto_nombre])].join(' ').toLowerCase();if(!t.includes(q))return false;}
+    return true;}).sort((a,b)=>cpMs(b.fecha_envio)-cpMs(a.fecha_envio));
+}
+function cpRender(){
+  const root=document.getElementById('cp-root');if(!root)return;
+  const d=CP.sel&&CP.docs.find(x=>x.id===CP.sel);
+  if(d){root.innerHTML=cpDetalle(d);return;}
+  CP.sel=null;
+  const locs=[...new Set(CP.docs.map(x=>x.local).filter(Boolean))];
+  const chip=(k,v,t)=>'<button class="btn btn-sm '+(CP[k]===v?'btn-black':'btn-outline')+'" data-cp="f" data-k="'+k+'" data-v="'+esc(v)+'">'+esc(t)+'</button>';
+  root.innerHTML=(CP.err?'<div class="card" style="color:var(--red);">'+esc(CP.err)+'</div>':'')+
+    '<div id="cp-res"></div>'+
+    '<div class="filter-bar">'+chip('local','todos','Todos los locales')+locs.map(l=>chip('local',l,cpLoc(l))).join('')+'</div>'+
+    '<div class="filter-bar">'+chip('est','todos','Todos los estados')+Object.entries(CP_EST).map(([k,v])=>chip('est',k,v[0])).join('')+'</div>'+
+    '<div class="filter-bar">'+[['todos','Todo'],['hoy','Hoy'],['semana','Esta semana'],['mes','Este mes']].map(x=>chip('rango',x[0],x[1])).join('')+
+      '<button class="btn btn-outline btn-sm" data-cp="csv" style="margin-left:auto;">⬇ Exportar CSV</button></div>'+
+    '<input id="cp-q" class="form-control" style="margin-bottom:12px;" placeholder="Buscar proveedor, producto o comprobante…" value="'+esc(CP.q)+'" autocomplete="off"><div id="cp-list"></div>';
+  cpLista();
+}
+function cpSumar(lista,fn){const m={};lista.forEach(d=>fn(d).forEach(([k,v])=>{m[k]=(m[k]||0)+v;}));return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
+function cpLista(){
+  const el=document.getElementById('cp-list'),res=document.getElementById('cp-res');if(!el||!res)return;
+  const l=cpFiltrados(),r=cpRango(),tot=x=>x.reduce((s,d)=>s+(cpNum(d.total_costo)||0),0);
+  const sem=tot(CP.docs.filter(d=>cpMs(d.fecha_envio)>=r.semana)),mes=tot(CP.docs.filter(d=>cpMs(d.fecha_envio)>=r.mes));
+  const porRev=CP.docs.filter(d=>cpEstado(d)==='por_revisar').length;
+  const porLoc=cpSumar(l,d=>[[cpLoc(d.local),cpNum(d.total_costo)||0]]);
+  const porVen=cpSumar(l,d=>(d.items||[]).filter(i=>cpNum(i.costo)!=null).map(i=>[i.vendedor||'Sin vendedor',+i.costo]));
+  const lista=(a,vacio)=>a.length?a.slice(0,8).map(x=>'<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;"><span>'+esc(x[0])+'</span><b>'+cpM(x[1])+'</b></div>').join(''):'<div style="font-size:12px;color:var(--gray-4);">'+vacio+'</div>';
+  res.innerHTML='<div class="kpi-grid" style="margin-bottom:14px;">'+
+    '<div class="kpi"><div class="kpi-icon">🕒</div><div class="kpi-label">Por revisar</div><div class="kpi-value">'+porRev+'</div><div class="kpi-sub">de '+CP.docs.length+' compras</div></div>'+
+    '<div class="kpi"><div class="kpi-icon">📅</div><div class="kpi-label">Esta semana</div><div class="kpi-value">'+cpM(sem)+'</div><div class="kpi-sub">total gastado</div></div>'+
+    '<div class="kpi"><div class="kpi-icon">🗓️</div><div class="kpi-label">Este mes</div><div class="kpi-value">'+cpM(mes)+'</div><div class="kpi-sub">total gastado</div></div></div>'+
+    '<div class="two-col" style="margin-bottom:14px;"><div class="card" style="margin:0;"><div class="card-title">Total por local <span style="font-weight:500;color:var(--gray-4);">· lo que ves ('+l.length+')</span></div>'+lista(porLoc,'Sin datos')+'</div>'+
+    '<div class="card" style="margin:0;"><div class="card-title">Total por vendedor <span style="font-weight:500;color:var(--gray-4);">· lo que ves</span></div>'+lista(porVen,'Sin costos por vendedor')+'</div></div>';
+  if(!l.length){el.innerHTML='<div class="empty"><div class="icon">🧾</div><p>'+(CP.docs.length?'Sin resultados con estos filtros.':'Aún no hay compras enviadas desde Facility.')+'</p></div>';return;}
+  el.innerHTML=l.map(d=>{const [lab,cls]=CP_EST[cpEstado(d)],al=cpAlertas(d),sc=cpSinComp(d);
+    return '<button class="card cp-row" data-cp="sel" data-id="'+esc(d.id)+'">'+
+      '<div class="cp-a"><b style="font-size:15px;">'+esc(cpLoc(d.local))+'</b><div style="font-size:12px;color:var(--gray-4);">'+esc(cpPedido(d))+' · '+cpFecha(cpMs(d.fecha_envio))+'</div></div>'+
+      '<div class="cp-b"><div style="font-size:11px;color:var(--gray-4);">Comprobante</div>'+(sc?'<b style="color:var(--red);">sin anotar</b>':'<b>'+esc(d.comprobante)+'</b>')+'</div>'+
+      '<div class="cp-c"><div style="font-size:11px;color:var(--gray-4);">Total gastado</div><b style="font-size:16px;">'+cpM(d.total_costo)+'</b></div>'+
+      '<div class="cp-d"><span class="badge '+cls+'">'+lab+'</span>'+al.map(a=>'<span class="badge badge-red">⚠ '+esc(a)+'</span>').join('')+'</div></button>';}).join('');
+}
+function cpDetalle(d){
+  const [lab,cls]=CP_EST[cpEstado(d)],al=cpAlertas(d),its=d.items||[],sn=cpSaldoNeg(d);
+  const fila=(k,v,extra)=>'<div class="detalle-fila" style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-2);'+(extra||'')+'"><span>'+k+'</span><b>'+v+'</b></div>';
+  return '<button class="btn btn-outline btn-sm" data-cp="volver" style="margin-bottom:10px;">‹ Compras</button>'+
+    '<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;"><div>'+
+      '<div style="font-size:22px;font-weight:800;">'+esc(cpLoc(d.local))+'</div>'+
+      '<div style="font-size:13px;color:var(--gray-4);margin-top:3px;">Enviada '+cpFecha(cpMs(d.fecha_envio))+(d.enviada_por?' · '+esc(d.enviada_por):'')+'</div>'+
+      (d.fecha_compra?'<div style="font-size:13px;color:var(--gray-4);">Compra realizada '+cpFecha(cpMs(d.fecha_compra))+'</div>':'')+'</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;">'+(d.requerimiento===true?'<span class="badge badge-purple" style="background:var(--purple-soft);color:var(--purple);">Requerimiento</span>':(d.pedido_numero?'<span class="badge badge-gray">Pedido #'+esc(d.pedido_numero)+'</span>':''))+'<span class="badge '+cls+'">'+lab+'</span></div></div>'+
+      (al.length?'<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">'+al.map(a=>'<span class="badge badge-red">⚠ '+esc(a)+'</span>').join('')+'</div>':'')+
+      '<div style="margin-top:12px;font-size:13px;">Comprobante: '+(cpSinComp(d)?'<b style="color:var(--red);">sin anotar</b>':'<b>'+esc(d.comprobante)+'</b>')+'</div></div>'+
+    '<div class="card"><div class="card-title">Productos · '+its.length+'</div><div class="table-wrap" style="overflow-x:auto;margin:0;"><table><thead><tr><th>Producto</th><th>Cantidad</th><th>Vendedor</th><th style="text-align:right;">Costo</th></tr></thead><tbody>'+
+      (its.length?its.map(i=>'<tr><td>'+esc(i.producto_nombre||'—')+(i.nota?'<div style="font-size:11px;color:var(--gray-4);">'+esc(i.nota)+'</div>':'')+(i.comprado===false?' <span class="badge badge-gray">no comprado</span>':'')+'</td><td>'+esc(i.cantidad_solicitada??'—')+' '+esc(i.unidad_medida||'')+'</td><td>'+esc(i.vendedor||'—')+'</td><td style="text-align:right;'+(i.costo==null?'color:var(--red);font-weight:700;':'')+'">'+(i.costo==null?'sin costo':cpM(i.costo))+'</td></tr>').join(''):'<tr><td colspan="4" style="color:var(--gray-4);">Sin productos.</td></tr>')+
+      '</tbody></table></div></div>'+
+    '<div class="card"><div class="card-title">Totales (tal como se enviaron)</div>'+
+      fila('Carreta',cpM(d.carreta))+fila('Flete',cpM(d.flete))+fila('Total gastado',cpM(d.total_costo))+fila('Monto asignado',cpM(d.monto_asignado))+
+      fila(sn?'Excedido (faltó dinero)':'Saldo (vuelto)',cpM(d.saldo),'border-bottom:none;'+(sn?'color:var(--red);':'color:var(--green);'))+'</div>'+
+    '<div class="card"><div class="card-title">Revisión de contabilidad</div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'+
+      Object.entries(CP_EST).map(([k,v])=>'<button class="btn btn-sm '+(cpEstado(d)===k?'btn-black':'btn-outline')+'" data-cp="estado" data-id="'+esc(d.id)+'" data-v="'+k+'">'+v[0]+'</button>').join('')+'</div>'+
+      (d.mgr_revisado_por?'<div style="font-size:12px;color:var(--gray-4);margin-bottom:10px;">Último cambio: '+esc(d.mgr_revisado_por)+' · '+cpFecha(cpMs(d.mgr_fecha))+'</div>':'')+
+      '<textarea id="cp-nota" class="form-control" rows="3" placeholder="Nota (opcional)">'+esc(d.mgr_nota||'')+'</textarea>'+
+      '<button class="btn btn-black btn-sm" data-cp="nota" data-id="'+esc(d.id)+'" style="margin-top:8px;">Guardar nota</button></div>';
+}
+async function cpGuardar(id,campos,msg){
+  try{await updateDoc(doc(db,'manager_contabilidad',id),{...campos,mgr_revisado_por:(ctx&&ctx.nombre)||'',mgr_fecha:serverTimestamp()});showToast(msg);}
+  catch(e){console.error(e);showToast('❌ No se pudo guardar (¿reglas de Firebase?).');}
+}
+function cpCSV(){
+  const l=cpFiltrados(),q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const h=['Local','Fecha envío','Pedido','Comprobante','Carreta','Flete','Total gastado','Monto asignado','Saldo','Estado','Alertas','Nota'];
+  const rows=l.map(d=>[cpLoc(d.local),cpFecha(cpMs(d.fecha_envio)),cpPedido(d),d.comprobante||'',cpNum(d.carreta)??'',cpNum(d.flete)??'',cpNum(d.total_costo)??'',cpNum(d.monto_asignado)??'',cpNum(d.saldo)??'',CP_EST[cpEstado(d)][0],cpAlertas(d).join(' | '),d.mgr_nota||''].map(q).join(','));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+[h.map(q).join(','),...rows].join('\n')],{type:'text/csv;charset=utf-8;'}));a.download='compras_facility_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest&&e.target.closest('[data-cp]');if(!el)return;
+  const a=el.dataset.cp,id=el.dataset.id,v=el.dataset.v;
+  if(a==='f'){CP[el.dataset.k]=v;cpRender();}
+  else if(a==='sel'){CP.sel=id;cpRender();window.scrollTo(0,0);}
+  else if(a==='volver'){CP.sel=null;cpRender();}
+  else if(a==='csv')cpCSV();
+  else if(a==='estado')cpGuardar(id,{mgr_estado:v},'✅ Marcada como '+CP_EST[v][0].toLowerCase());
+  else if(a==='nota')cpGuardar(id,{mgr_nota:document.getElementById('cp-nota').value.trim()},'✅ Nota guardada');
+});
+document.addEventListener('input',e=>{if(e.target.id==='cp-q'){CP.q=e.target.value;cpLista();}});
+window.cpEscuchar=cpEscuchar;
+
 function mtEscuchar(){
   if(MT.unsub)return;
   const mk=(c,k)=>onSnapshot(collection(db,c),s=>{MT[k]=s.docs.map(d=>({id:d.id,...d.data()}));MT.err='';mtRender();},e=>{console.error(c,e);MT.err='No se pudo leer Mantenimiento (¿reglas de Firebase sin publicar?).';mtRender();});
